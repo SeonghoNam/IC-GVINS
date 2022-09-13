@@ -38,7 +38,9 @@ public:
     typedef std::unordered_map<ulong, Frame::Ptr> KeyFrames;
     typedef std::unordered_map<ulong, MapPoint::Ptr> LandMarks;
 
+    // delete를 통한 명시적으로 기본생성자 호출 금지
     Map() = delete;
+    // Map 객체 형변환시 명시적으로 해줘야 함
     explicit Map(size_t size)
         : window_size_(size) {
     }

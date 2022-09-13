@@ -23,6 +23,8 @@
 #include "tracking/mappoint.h"
 #include "tracking/frame.h"
 
+// 생성지: refrence frame, 3d position, key point, depth, type
+// refence frame, keypoint, depth 는 처음 관측된 좌표인듯? inverse depth계산하는 처음 관측된 keypoint 피쳐
 MapPoint::MapPoint(ulong id, const std::shared_ptr<Frame> &ref_frame, Vector3d pos, cv::Point2f keypoint, double depth,
                    MapPointType type)
     : pos_(std::move(pos))
@@ -48,6 +50,7 @@ MapPoint::Ptr MapPoint::createMapPoint(std::shared_ptr<Frame> &ref_frame, Vector
     return std::make_shared<MapPoint>(factory_id_++, ref_frame, pos, feature, depth, type);
 }
 
+// mappoint에 대한 observation 추가. mappoint-feature 관계
 void MapPoint::addObservation(const Feature::Ptr &feature) {
     std::unique_lock<std::mutex> lock(mappoint_mutex_);
 

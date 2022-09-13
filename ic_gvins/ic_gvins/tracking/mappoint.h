@@ -91,6 +91,7 @@ public:
         return used_times_;
     }
 
+    // 
     void addOptimizedTimes() {
         std::unique_lock<std::mutex> lock(mappoint_mutex_);
         optimized_times_++;
@@ -100,7 +101,7 @@ public:
         std::unique_lock<std::mutex> lock(mappoint_mutex_);
         return optimized_times_;
     }
-
+    // 모든 observation 삭제. mappoint 삭제시?
     void removeAllObservations() {
         std::unique_lock<std::mutex> lock(mappoint_mutex_);
         observations_.clear();
@@ -170,9 +171,9 @@ private:
     cv::Point2f ref_frame_keypoint_, ref_frame_keypoint_tmp_;
     std::weak_ptr<Frame> ref_frame_, ref_frame_tmp_;
 
-    int optimized_times_;
-    int used_times_;
-    int observed_times_;
+    int optimized_times_;   // mappoint가 최적화된 수??
+    int used_times_;        // ???
+    int observed_times_;    // 피쳐로 관측된 수?
     bool isoutlier_;
 
     ulong id_;

@@ -35,9 +35,9 @@ using std::vector;
 
 enum keyFrameState {
     KEYFRAME_NONE              = 0,
-    KEYFRAME_REMOVE_SECOND_NEW = 1,
-    KEYFRAME_NORMAL            = 2,
-    KEYFRAME_REMOVE_OLDEST     = 3,
+    KEYFRAME_REMOVE_SECOND_NEW = 1, // parallax가 확보되지 않았으나, last keyframe관측 후 너무 오래된 경우    
+    KEYFRAME_NORMAL            = 2, // parallax가 확보된 경우, sliding window 다 안찼을 경우
+    KEYFRAME_REMOVE_OLDEST     = 3, // parallax가 확보되고, map의 sliding window가 다 찼을 경우
 };
 
 class Frame {

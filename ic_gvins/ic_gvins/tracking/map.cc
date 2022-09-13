@@ -86,11 +86,13 @@ void Map::removeMappoint(MapPoint::Ptr &mappoint) {
     mappoint.reset();
 }
 
+// map에서 keyframe삭제, 단, keyframe의 feature로 관측된 mappoint를 삭제하는지는 선택
 void Map::removeKeyFrame(Frame::Ptr &frame, bool isremovemappoint) {
     std::unique_lock<std::mutex> lock(map_mutex_);
 
     if (isremovemappoint) {
         // 移除与关键帧关联的所有路标点
+        // 해당 frame에서 관측된 feature가 reference frame인 경우 식별된 mappoint 집합
         vector<ulong> mappointid;
         auto features = frame->features();
         for (auto &feature : features) {
@@ -124,6 +126,7 @@ void Map::removeKeyFrame(Frame::Ptr &frame, bool isremovemappoint) {
     frame.reset();
 }
 
+// mappoint에 대하여 number of observations / number of keyframes
 double Map::mappointObservedRate(const MapPoint::Ptr &mappoint) {
     std::unique_lock<std::mutex> lock(map_mutex_);
 

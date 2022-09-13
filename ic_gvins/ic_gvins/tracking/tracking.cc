@@ -113,7 +113,7 @@ bool Tracking::preprocessing(Frame::Ptr frame) {
         cv::cvtColor(frame->image(), frame->image(), cv::COLOR_BGR2GRAY);
     }
 
-    if (track_check_histogram_) {
+    if (track_check_histogram_) {   
         // 计算直方图参数
         double hist = calculateHistigram(frame->image());
         if (histogram_ != 0) {
@@ -149,14 +149,14 @@ TrackState Tracking::track(Frame::Ptr frame) {
 
     TrackState track_state = TRACK_PASSED;
 
-    // 预处理
+    // histogram 확인
     if (!preprocessing(std::move(frame))) {
         return track_state;
     }
 
     if (isinitializing_) {
         // Initialization
-        if (frame_ref_ == nullptr) {
+        if (frame_ref_ == nullptr) {    // first frame
             doResetTracking();
 
             frame_ref_ = frame_cur_;
@@ -166,23 +166,25 @@ TrackState Tracking::track(Frame::Ptr frame) {
             return TRACK_FIRST_FRAME;
         }
 
-        if (pts2d_ref_.empty()) {
-            featuresDetection(frame_ref_, false);
+        // 2nd~ frame
+        if (pts2d_ref_.empty()) {   
+            featuresDetection(frame_ref_, false);       // 이전 frame의 feature가 없으면 다시 추출
         }
 
         // 从参考帧跟踪过来的特征点
-        trackReferenceFrame();
+        trackReferenceFrame();      // tracking (optical flow)
 
-        if (parallax_ref_ < track_min_parallax_) {
+        if (parallax_ref_ < track_min_parallax_) {      // parallax가 확보되면 Intializing state 그 다음 triangulation
             showTracking();
             return TRACK_INITIALIZING;
         }
 
         LOGI << "Initialization tracking with parallax " << parallax_ref_;
 
+        // state = TRACK_INITIALIZING 일 떄 
         triangulation();
 
-        if (doResetTracking()) {
+        if (doResetTracking()) {    // 현재 frame에 feature가 없을 때
             LOGW << "Reset initialization";
             showTracking();
 
@@ -190,10 +192,14 @@ TrackState Tracking::track(Frame::Ptr frame) {
             return TRACK_FIRST_FRAME;
         }
 
+        // 현재 frame을 keyframe으로 설정 doResetTracking()함수에서 frame_ref_ = frame_cur_로 변경됨.. 
+        // TODO: 없어도 될듯? 밑에코드에서 동익작업수행..
+        // TODO: ref, cur frame 모두 keyframe으로 설정하고자 하는 의도
         // 初始化两帧都是关键帧
-        frame_ref_->setKeyFrame(KEYFRAME_NORMAL);
+        frame_ref_->setKeyFrame(KEYFRAME_NORMAL);   
 
         // 新关键帧, 地图更新, 数据转存
+        // 현재 frame keyframe으로 설정
         makeNewFrame(KEYFRAME_NORMAL);
         last_keyframe_ = frame_cur_;
 
@@ -203,31 +209,35 @@ TrackState Tracking::track(Frame::Ptr frame) {
     } else {
         // Tracking
 
-        // 跟踪上一帧中带路标点的特征, 利用预测的位姿先验
+        // mappoint가 있는 feature들에 대한 optical flow track
         trackMappoint();
 
-        // 未关联路标点的新特征, 补偿旋转预测
+        // mappoint가 없는 feature들에 대한 optical flow track
+        // 즉, 이전 frame에서 처음 관측된 featrue(=traingulation못한 feature)
         trackReferenceFrame();
 
-        // 检查关键帧类型
+        // 키프레임인지 확인 (normal, remove_oldest, remove_second_new)
         auto keyframe_state = checkKeyFrameSate();
 
-        // 正常关键帧, 需要三角化路标点
+        // 키프레임 형태 확인
         if ((keyframe_state == KEYFRAME_NORMAL) || (keyframe_state == KEYFRAME_REMOVE_OLDEST)) {
-            // 三角化补充路标点
+            // 일반 키프레임이면 삼각측량 수행(mappoint가 없는 feature들에 대해..pts2d_ref,pts2d_cur)
+            // 단, 삼각측량 조건을 만족할경우에만 수행
             triangulation();
         } else {
-            // 添加新的特征
+            // keyframe_none, keyframe_remove_second_last인 경우 새로운 featrue detection with mask (검출된 feature주변으로 mask씌움)
             featuresDetection(frame_cur_, true);
         }
 
-        // 跟踪失败, 路标点数据严重不足
+        // feature tracking 정보 초기화
         if (doResetTracking()) {
+            // 추적실패, feature가 적은경우
             makeNewFrame(KEYFRAME_NORMAL);
             return TRACK_LOST;
         }
 
-        // 观测帧, 进行插入
+        // 키프레임인 경우 키프레임으로 설정, normal, remove_oldest인 경우 새로운 featrue detection with mask
+        // 
         if (keyframe_state != KEYFRAME_NONE) {
             makeNewFrame(keyframe_state);
         }
@@ -272,14 +282,14 @@ keyFrameState Tracking::checkKeyFrameSate() {
 
     double parallax = (parallax_map_ * parallax_map_counts_ + parallax_ref_ * parallax_ref_counts_) /
                       (parallax_map_counts_ + parallax_ref_counts_);
-    if (parallax > track_min_parallax_) {
+    if (parallax > track_min_parallax_) {   // parallax가 확보되면 keyframe
         // 新的关键帧, 满足最小像素视差
-
-        keyframe_state = map_->isWindowFull() ? KEYFRAME_REMOVE_OLDEST : KEYFRAME_NORMAL;
+        // map slid window가 다 찼으면 old keyframe 삭제, 그렇지 않으면 기본
+        keyframe_state = map_->isWindowFull() ? KEYFRAME_REMOVE_OLDEST : KEYFRAME_NORMAL;   
 
         LOGI << "Keyframe at " << Logging::doubleData(frame_cur_->stamp()) << ", mappoints "
              << frame_cur_->numFeatures() << ", interval " << dt << ", parallax " << parallax;
-    } else if (dt > track_max_interval_) {
+    } else if (dt > track_max_interval_) {  // last keyframe과 너무 오래됬으면
         // 普通观测帧, 非关键帧
         keyframe_state = KEYFRAME_REMOVE_SECOND_NEW;
         LOGI << "Keyframe at " << Logging::doubleData(frame_cur_->stamp()) << " due to long interval";
@@ -351,7 +361,7 @@ void Tracking::showTracking() {
 
 bool Tracking::trackMappoint() {
 
-    // 上一帧中的路标点
+    // Mappoint가 있는 feature만 선별 & (3d, 현재 카메라pose)로 예측되는 featrue 좌표 추출
     mappoint_matched_.clear();
     vector<cv::Point2f> pts2d_map, pts2d_matched, pts2d_map_undis;
     vector<MapPointType> mappoint_type;
@@ -364,7 +374,7 @@ bool Tracking::trackMappoint() {
             pts2d_map.push_back(feature.second->distortedKeyPoint());
             mappoint_type.push_back(mappoint->mapPointType());
 
-            // 预测的特征点
+            // 예상되는 feature = 3d points를 현재 예측되는 camera matrix(Pose)로 projection시켜 예측된 feature 좌표
             auto pixel = camera_->world2pixel(mappoint->pos(), frame_cur_->pose());
 
             pts2d_matched.emplace_back(pixel);
@@ -382,7 +392,7 @@ bool Tracking::trackMappoint() {
     vector<float> error;
     vector<cv::Point2f> pts2d_reverse = pts2d_map;
 
-    // 正向光流
+    // 예측된 feature좌표를 초기값으로 하여 optical flow 수행
     cv::calcOpticalFlowPyrLK(frame_pre_->image(), frame_cur_->image(), pts2d_map, pts2d_matched, status, error,
                              cv::Size(21, 21), TRACK_PYRAMID_LEVEL,
                              cv::TermCriteria(cv::TermCriteria::COUNT + cv::TermCriteria::EPS, 30, 0.01),
@@ -462,7 +472,7 @@ bool Tracking::trackReferenceFrame() {
         return false;
     }
 
-    // 补偿旋转预测
+    // 회전운동에 대한 예측
     Matrix3d r_cur_pre = frame_cur_->pose().R.transpose() * frame_pre_->pose().R;
 
     // 原始畸变补偿
@@ -479,23 +489,26 @@ bool Tracking::trackReferenceFrame() {
         pts2d_cur_.emplace_back(pp_cur);
     }
 
-    // 跟踪参考帧
+    // optical flow 수행. 회전에 대한 예측을 초기값으로 주고 optical flow
     vector<uint8_t> status, statue_reverse;
     vector<float> error;
     vector<cv::Point2f> pts2d_reverse = pts2d_new_;
 
+    // forward tracking
     // 正向光流
     cv::calcOpticalFlowPyrLK(frame_pre_->image(), frame_cur_->image(), pts2d_new_, pts2d_cur_, status, error,
                              cv::Size(21, 21), TRACK_PYRAMID_LEVEL,
                              cv::TermCriteria(cv::TermCriteria::COUNT + cv::TermCriteria::EPS, 30, 0.01),
                              cv::OPTFLOW_USE_INITIAL_FLOW);
 
+    // backword tracking
     // 反向光流
     cv::calcOpticalFlowPyrLK(frame_cur_->image(), frame_pre_->image(), pts2d_cur_, pts2d_new_, statue_reverse, error,
                              cv::Size(21, 21), TRACK_PYRAMID_LEVEL,
                              cv::TermCriteria(cv::TermCriteria::COUNT + cv::TermCriteria::EPS, 30, 0.01),
                              cv::OPTFLOW_USE_INITIAL_FLOW);
 
+    // outlier culling by LK status
     // 剔除跟踪失败的, 正向反向跟踪在0.5个像素以内
     for (size_t k = 0; k < status.size(); k++) {
         if (status[k] && statue_reverse[k] && !isOnBorder(pts2d_cur_[k]) &&
@@ -517,6 +530,7 @@ bool Tracking::trackReferenceFrame() {
         return false;
     }
 
+    // calc pixel velocity of feature
     // 原始带畸变的角点
     pts2d_new_undis      = pts2d_new_;
     auto pts2d_cur_undis = pts2d_cur_;
@@ -539,6 +553,8 @@ bool Tracking::trackReferenceFrame() {
         }
     }
 
+
+    // outlier culling by RANSAC
     // 计算视差
     auto pts2d_ref_undis = pts2d_ref_;
     camera_->undistortPoints(pts2d_ref_undis);
@@ -796,6 +812,8 @@ bool Tracking::triangulation() {
     return true;
 }
 
+
+// triangulation algorithm
 void Tracking::triangulatePoint(const Eigen::Matrix<double, 3, 4> &pose0, const Eigen::Matrix<double, 3, 4> &pose1,
                                 const Eigen::Vector3d &pc0, const Eigen::Vector3d &pc1, Eigen::Vector3d &pw) {
     Eigen::Matrix4d design_matrix = Eigen::Matrix4d::Zero();
@@ -809,6 +827,7 @@ void Tracking::triangulatePoint(const Eigen::Matrix<double, 3, 4> &pose0, const 
     pw                    = point.head<3>() / point(3);
 }
 
+// depth가 min < depth < max를 만족하고, reprojection error < xx 를 만족하는지 확인
 bool Tracking::isGoodToTrack(const cv::Point2f &pp, const Pose &pose, const Vector3d &pw, double scale,
                              double depth_scale) {
     // 当前相机坐标系
