@@ -171,8 +171,8 @@ void MISC::insMechanization(const IntegrationConfiguration &config, const IMU &i
     state.time = imu_cur.time;
 
     // 双子样
-    Vector3d dvfb = imu_cur.dvel + 0.5 * imu_cur.dtheta.cross(imu_cur.dvel) +
-                    1.0 / 12.0 * (imu_pre.dtheta.cross(imu_cur.dvel) + imu_pre.dvel.cross(imu_cur.dtheta));
+    Vector3d dvfb = imu_cur2.dvel + 0.5 * imu_cur2.dtheta.cross(imu_cur2.dvel) +
+                    1.0 / 12.0 * (imu_pre2.dtheta.cross(imu_cur2.dvel) + imu_pre2.dvel.cross(imu_cur2.dtheta));
     Vector3d dtheta = imu_cur2.dtheta + 1.0 / 12.0 * imu_pre2.dtheta.cross(imu_cur2.dtheta);
 
     // 速度变化量
@@ -225,32 +225,29 @@ void MISC::redoInsMechanization(const IntegrationConfiguration &config, const In
 
     IMU imu0 = ins_windows[index - 1].first;
     IMU imu1 = ins_windows[index].first;
-    IMU imu;
 
     int isneed = isNeedInterpolation(imu0, imu1, state.time);
     if (isneed == -1) {
+        // 前一时刻状态为状态量
         insMechanization(config, imu0, imu1, state);
         ins_windows[index].second = state;
     } else if (isneed == 1) {
-        // 当前时刻状态即为状态量
+        // 当前时刻状态为状态量
         state.time                = imu1.time;
         ins_windows[index].second = state;
-
     } else if (isneed == 2) {
-        imuInterpolation(imu1, imu, imu1, state.time);
-        insMechanization(config, imu0, imu, state);
-        insMechanization(config, imu, imu1, state);
+        imuInterpolation(imu1, imu0, imu1, state.time);
+        insMechanization(config, imu0, imu1, state);
         ins_windows[index].second = state;
     }
-    imu0 = imu1;
 
     // 仅更新IMU时间点的状态
     for (size_t k = index + 1; k < ins_windows.size(); k++) {
+        imu0 = imu1;
+
         imu1 = ins_windows[k].first;
         insMechanization(config, imu0, imu1, state);
         ins_windows[k].second = state;
-
-        imu0 = imu1;
     }
 
     // 移除过期的IMU历元
