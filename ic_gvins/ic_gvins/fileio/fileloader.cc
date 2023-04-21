@@ -22,7 +22,7 @@
 
 #include "fileio/fileloader.h"
 
-#include <absl/strings/str_split.h>
+#include "boost/algorithm/string.hpp"
 #include <iostream>
 
 FileLoader::FileLoader(const string &filename, int columns, int filetype) {
@@ -97,8 +97,9 @@ bool FileLoader::load_() {
         std::getline(filefp_, line);
         if (line.empty())
             return false;
-
-        vector<string> splits = absl::StrSplit(line, absl::ByAnyChar(", \t"), absl::SkipWhitespace());
+        
+        vector<string> splits;
+        boost::split(splits, line, boost::is_any_of(", \t"));
 
         data_.clear();
         for (auto &split : splits) {

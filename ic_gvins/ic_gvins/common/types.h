@@ -28,6 +28,7 @@
 using Eigen::Matrix3d;
 using Eigen::Quaterniond;
 using Eigen::Vector3d;
+using Eigen::Matrix4d;
 
 typedef struct GNSS {
     double time;

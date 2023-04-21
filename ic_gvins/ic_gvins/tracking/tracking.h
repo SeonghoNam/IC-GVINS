@@ -59,6 +59,11 @@ public:
     bool isGoodToTrack(const cv::Point2f &pp, const Pose &pose, const Vector3d &pw, double scale,
                        double depth_scale = 1.0);
     static Eigen::Matrix4d pose2Tcw(const Pose &pose);
+    static Eigen::Matrix4d pose2Twc(const Pose &pose);
+    Pose getCurrentPose()
+    {
+        return frame_cur_->pose();
+    }
 
 private:
     void showTracking();

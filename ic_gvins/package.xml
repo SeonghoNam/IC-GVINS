@@ -1,4 +1,4 @@
-<?xml version="1.0"?>
+<!-- <package> -->
 <package format="2">
     <name>ic_gvins</name>
     <version>1.0.0</version>
@@ -9,9 +9,12 @@
     <maintainer email="thl@whu.edu.cn">hailiang</maintainer>
     <author email="thl@whu.edu.cn">hailiang</author>
 
-    <buildtool_depend>catkin</buildtool_depend>
+    <buildtool_depend>ament_cmake</buildtool_depend>
 
-    <depend>roscpp</depend>
+    <depend>rclcpp</depend>
     <depend>std_msgs</depend>
+    <export>
+        <build_type>ament_cmake</build_type>
+    </export>
 
 </package>

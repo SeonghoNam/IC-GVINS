@@ -32,7 +32,6 @@
 #include <yaml-cpp/yaml.h>
 
 #include <boost/filesystem.hpp>
-#include <sensor_msgs/image_encodings.h>
 
 #include <atomic>
 #include <csignal>
@@ -50,18 +49,24 @@ void FusionROS::setFinished() {
 }
 
 void FusionROS::run() {
-    ros::NodeHandle nh;
-    ros::NodeHandle pnh("~");
+    auto nh = rclcpp::Node::make_shared("gvins_node");
 
     // message topic
     string imu_topic, gnss_topic, image_topic, livox_topic;
-    pnh.param<string>("imu_topic", imu_topic, "/imu0");
-    pnh.param<string>("gnss_topic", gnss_topic, "/gnss0");
-    pnh.param<string>("image_topic", image_topic, "/cam0");
+    nh->set_parameter(rclcpp::Parameter("imu_topic", "/imu0"));
+    nh->set_parameter(rclcpp::Parameter("gnss_topic", "/gnss0"));
+    nh->set_parameter(rclcpp::Parameter("image_topic", "/cam0"));
+    // pnh.param<string>("imu_topic", imu_topic, "/imu0");
+    // pnh.param<string>("gnss_topic", gnss_topic, "/gnss0");
+    // pnh.param<string>("image_topic", image_topic, "/cam0");
 
     // GVINS parameter
     string configfile;
-    pnh.param<string>("configfile", configfile, "gvins.yaml");
+    // nh->set_parameter(rclcpp::Parameter("configfile", "gvins.yaml"));
+    // configfile = 
+    auto para_configfile = nh->get_parameter("configfile");
+    configfile = para_configfile.get_value<string>();
+    // pnh.param<string>("configfile", configfile, "gvins.yaml");
 
     // Load configurations
     YAML::Node config;
@@ -110,21 +115,26 @@ void FusionROS::run() {
     }
 
     // subscribe message
-    ros::Subscriber imu_sub   = nh.subscribe<sensor_msgs::Imu>(imu_topic, 200, &FusionROS::imuCallback, this);
-    ros::Subscriber gnss_sub  = nh.subscribe<sensor_msgs::NavSatFix>(gnss_topic, 1, &FusionROS::gnssCallback, this);
-    ros::Subscriber image_sub = nh.subscribe<sensor_msgs::Image>(image_topic, 20, &FusionROS::imageCallback, this);
+    rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr imu_sub;
+    rclcpp::Subscription<sensor_msgs::msg::NavSatFix>::SharedPtr gnss_sub;
+    rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr image_sub;
+    
+    imu_sub = nh->create_subscription<sensor_msgs::msg::Imu>("imu_topic", 200, std::bind(&FusionROS::imuCallback, this, 1));
+    gnss_sub = nh->create_subscription<sensor_msgs::msg::NavSatFix>("gnss_topic", 200, std::bind(&FusionROS::gnssCallback, this, 1));
+    image_sub = nh->create_subscription<sensor_msgs::msg::Image>("image_topic", 200, std::bind(&FusionROS::imageCallback, this, 1));
+
 
     LOGI << "Waiting ROS message...";
 
     // enter message loopback
-    ros::spin();
+    rclcpp::spin(nh);
 }
 
-void FusionROS::imuCallback(const sensor_msgs::ImuConstPtr &imumsg) {
+void FusionROS::imuCallback(const sensor_msgs::msg::Imu::SharedPtr &imumsg) {
     imu_pre_ = imu_;
 
     // Time convertion
-    double unixsecond = imumsg->header.stamp.toSec();
+    double unixsecond = imumsg->header.stamp.sec;
     double weeksec;
     int week;
     GpsTime::unix2gps(unixsecond, week, weeksec);
@@ -160,9 +170,9 @@ void FusionROS::imuCallback(const sensor_msgs::ImuConstPtr &imumsg) {
     }
 }
 
-void FusionROS::gnssCallback(const sensor_msgs::NavSatFixConstPtr &gnssmsg) {
+void FusionROS::gnssCallback(const sensor_msgs::msg::NavSatFix::SharedPtr &gnssmsg) {
     // Time convertion
-    double unixsecond = gnssmsg->header.stamp.toSec();
+    double unixsecond = gnssmsg->header.stamp.sec;
     double weeksec;
     int week;
     GpsTime::unix2gps(unixsecond, week, weeksec);
@@ -198,7 +208,7 @@ void FusionROS::gnssCallback(const sensor_msgs::NavSatFixConstPtr &gnssmsg) {
     }
 }
 
-void FusionROS::imageCallback(const sensor_msgs::ImageConstPtr &imagemsg) {
+void FusionROS::imageCallback(const sensor_msgs::msg::Image::SharedPtr &imagemsg) {
     Mat image;
 
     // Copy image data
@@ -211,7 +221,7 @@ void FusionROS::imageCallback(const sensor_msgs::ImageConstPtr &imagemsg) {
     }
 
     // Time convertion
-    double unixsecond = imagemsg->header.stamp.toSec();
+    double unixsecond = imagemsg->header.stamp.sec;
     double weeksec;
     int week;
     GpsTime::unix2gps(unixsecond, week, weeksec);
@@ -252,7 +262,7 @@ void checkStateThread(std::shared_ptr<FusionROS> fusion) {
     std::cout << "GVINS has been shutdown ..." << std::endl;
 
     // Shutdown ROS
-    ros::shutdown();
+    rclcpp::shutdown();
 
     std::cout << "ROS node has been shutdown ..." << std::endl;
 }
@@ -262,8 +272,12 @@ int main(int argc, char *argv[]) {
     Logging::initialization(argv, true, true);
 
     // ROS node
-    ros::init(argc, argv, "gvins_node", ros::init_options::NoSigintHandler);
+    rclcpp::init(argc, argv);
+    // auto node = rclcpp::Node::make_shared("gvins_node");
 
+
+    // rclcpp::init(argc, argv, "gvins_node", rclcpp:init_options::NoSigintHandler);
+    
     // Register signal handler
     std::signal(SIGINT, sigintHandler);
 

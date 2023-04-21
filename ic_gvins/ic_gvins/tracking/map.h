@@ -54,10 +54,12 @@ public:
     void insertKeyFrame(const Frame::Ptr &frame);
 
     const KeyFrames &keyframes() {
+        std::unique_lock<std::mutex> lock(map_mutex_);
         return keyframes_;
     }
 
     const LandMarks &landmarks() {
+        std::unique_lock<std::mutex> lock(map_mutex_);
         return landmarks_;
     }
 

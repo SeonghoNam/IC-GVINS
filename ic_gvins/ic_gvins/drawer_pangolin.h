@@ -29,21 +29,15 @@
 #include <condition_variable>
 #include <memory>
 #include <mutex>
-
-#include <nav_msgs/msg/path.hpp>
-#include <nav_msgs/msg/odometry.hpp>
-#include <sensor_msgs/msg/image.hpp>
-#include <sensor_msgs/msg/point_cloud.hpp>
-
-#include <rclcpp/rclcpp.hpp>
+#include <pangolin/pangolin.h>
 
 using std::string;
 using std::vector;
 
-class DrawerRviz : public Drawer {
+class DrawerPangolin : public Drawer {
 
 public:
-    explicit DrawerRviz(rclcpp::Node &nh);
+    explicit DrawerPangolin();
 
     void run() override;
 
@@ -53,6 +47,8 @@ public:
     void addNewFixedMappoint(Vector3d point) override;
 
     void updateMap(const Eigen::Matrix4d &pose) override;
+
+    // void updateMap(const Pose pose) override;
 
     // 跟踪图像
     void updateFrame(Frame::Ptr frame) override;
@@ -67,6 +63,8 @@ private:
 
     void publishOdometry();
 
+    void DrawFrame(Pose pose, const float *color);
+    void FollowCurrentFrame(pangolin::OpenGlRenderState &vis_camera);
 private:
     // 多线程
     std::condition_variable update_sem_;
@@ -84,14 +82,6 @@ private:
     vector<Vector3d> fixed_mappoints_;
 
     Pose pose_;
-
-    nav_msgs::msg::Path path_;
-    
-    rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr path_pub_;
-    rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr pose_pub_;
-    rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr track_image_pub_;
-    rclcpp::Publisher<sensor_msgs::msg::PointCloud>::SharedPtr fixed_points_pub_;
-    rclcpp::Publisher<sensor_msgs::msg::PointCloud>::SharedPtr current_points_pub_;
 
     string frame_id_;
 };

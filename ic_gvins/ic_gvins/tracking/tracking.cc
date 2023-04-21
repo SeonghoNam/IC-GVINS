@@ -857,7 +857,15 @@ Eigen::Matrix4d Tracking::pose2Tcw(const Pose &pose) {
     Tcw.block<3, 1>(0, 3) = -pose.R.transpose() * pose.t;
     return Tcw;
 }
+Eigen::Matrix4d Tracking::pose2Twc(const Pose &pose) {
+    Eigen::Matrix4d Twc;
+    Twc.setZero();
+    Twc(3, 3) = 1;
 
+    Twc.block<3, 3>(0, 0) = pose.R;
+    Twc.block<3, 1>(0, 3) = pose.t;
+    return Twc;
+}
 double Tracking::keyPointParallax(const cv::Point2f &pp0, const cv::Point2f &pp1, const Pose &pose0,
                                   const Pose &pose1) {
     Vector3d pc0 = camera_->pixel2cam(pp0);

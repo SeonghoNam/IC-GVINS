@@ -23,8 +23,8 @@
 #ifndef TIMECOST_H
 #define TIMECOST_H
 
-#include <absl/strings/str_format.h>
-#include <absl/time/clock.h>
+#include <chrono>
+#include <boost/format.hpp>
 
 class TimeCost {
 
@@ -34,13 +34,13 @@ public:
     }
 
     void restart() {
-        start_     = absl::Now();
+        start_     = std::chrono::steady_clock::now();;
         is_finish_ = false;
     }
 
     void finish() {
-        end_       = absl::Now();
-        duration_  = end_ - start_;
+        end_       = std::chrono::steady_clock::now();;
+        duration_  = std::chrono::duration_cast<std::chrono::duration<double>> (end_ - start_);
         is_finish_ = true;
     }
 
@@ -48,30 +48,32 @@ public:
         if (!is_finish_) {
             finish();
         }
-
-        return absl::ToDoubleSeconds(duration_);
+        
+        return duration_.count();
     }
 
     std::string costInSecond(const std::string &header) {
         auto cost = costInSecond();
-        return absl::StrFormat("%s %0.6lf seconds", header.c_str(), cost);
+        boost::format fmt("%s %0.6lf seconds");
+        return (fmt % header.c_str() % cost).str();
     }
 
     double costInMillisecond() {
         if (!is_finish_) {
             finish();
         }
-        return absl::ToDoubleMilliseconds(duration_);
+        return duration_.count() * 1000;
     }
 
     std::string costInMillisecond(const std::string &header) {
         auto cost = costInMillisecond();
-        return absl::StrFormat("%s %0.3lf milliseconds", header.c_str(), cost);
+        boost::format fmt("%s %0.3lf milliseconds");
+        return (fmt % header.c_str() % cost).str();
     }
 
 private:
-    absl::Time     start_, end_;
-    absl::Duration duration_;
+    std::chrono::_V2::steady_clock::time_point     start_, end_;
+    std::chrono::duration<double>  duration_;
 
     bool is_finish_{false};
 };

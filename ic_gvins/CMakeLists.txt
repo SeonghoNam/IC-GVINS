@@ -51,31 +51,62 @@ find_package(TBB REQUIRED)
 target_link_libraries(ic_gvins_core
         TBB::tbb)
 
-# abseil
-set(ABSL_PROPAGATE_CXX_STD true)
-add_subdirectory(thirdparty/abseil-cpp abseil-cpp)
-target_link_libraries(ic_gvins_core
-        absl::strings
-        absl::str_format
-        absl::time)
+# pangolin
+find_package(Pangolin REQUIRED)
+include_directories(${Pangolin_INCLUDE_DIRS})
+target_link_libraries(ic_gvins_core ${Pangolin_LIBRARIES} GL GLU GLEW glut)
 
-# ROS interface
-find_package(catkin REQUIRED COMPONENTS
-        message_generation
-        roscpp
-        std_msgs)
-catkin_package(
-        LIBRARIES
-        CATKIN_DEPENDS roscpp std_msgs)
-include_directories(
-        ${catkin_INCLUDE_DIRS})
+# app
+add_executable(run_kitti app/run_kitti.cc)
+target_link_libraries(run_kitti ic_gvins_core)
 
-# GVINS ROS with standard messages
-add_executable(${PROJECT_NAME}_ros
-        ROS/fusion_ros.cc
-        ROS/drawer_rviz.cc)
+# # abseil
+# set(ABSL_PROPAGATE_CXX_STD true)
+# add_subdirectory(thirdparty/abseil-cpp abseil-cpp)
+# target_link_libraries(ic_gvins_core
+#         absl::strings
+#         absl::str_format
+#         absl::time)
 
-        add_dependencies(${PROJECT_NAME}_ros ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-target_link_libraries(${PROJECT_NAME}_ros
-        ${catkin_LIBRARIES}
-        ic_gvins_core)
+# # ROS interface
+# find_package(ament_cmake REQUIRED COMPONENTS
+#         message_generation
+#         roscpp
+#         std_msgs)
+# catkin_package(
+#         LIBRARIES
+#         CATKIN_DEPENDS roscpp std_msgs)
+# include_directories(
+#         ${catkin_INCLUDE_DIRS})
+
+# find_package(ament_cmake REQUIRED)
+# find_package(rclcpp REQUIRED)
+# find_package(std_msgs REQUIRED)
+
+# rosidl_generate_interfaces(${PROJECT_NAME}_ros
+#   "msg/Imu.msg"
+#   "msg/RadarScan.msg"
+#   "msg/RadarTrack.msg"
+#   "msg/RadarTracks.msg"
+#   DEPENDENCIES std_msgs geometry_msgs 
+# )
+
+# include_directories(include)        
+
+# # GVINS ROS with standard messages
+# add_executable(${PROJECT_NAME}_ros
+#         ROS/fusion_ros.cc
+#         ROS/drawer_rviz.cc)
+
+# #         add_dependencies(${PROJECT_NAME}_ros ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+# target_link_libraries(${PROJECT_NAME}_ros
+#         ic_gvins_core)
+# ament_target_dependencies(${PROJECT_NAME}_ros
+#   rclcpp
+#   std_msgs)
+
+
+# ament_export_include_directories(include)  
+# ament_export_include_directories(include)
+# ament_export_dependencies(std_msgs)
+# ament_package()

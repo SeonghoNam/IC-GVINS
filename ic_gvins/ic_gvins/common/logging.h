@@ -24,7 +24,7 @@
 #define LOGGING_H
 
 #include <Eigen/Geometry>
-#include <absl/strings/str_format.h>
+#include <boost/format.hpp>
 #include <glog/logging.h>
 #include <glog/stl_logging.h>
 #include <iostream>
@@ -78,7 +78,8 @@ public:
     }
 
     static string doubleData(double data) {
-        return absl::StrFormat("%0.6lf", data);
+        boost::format fmt_t("%0.6lf");
+        return (fmt_t % data).str();
     }
 
     static void shutdownLogging() {

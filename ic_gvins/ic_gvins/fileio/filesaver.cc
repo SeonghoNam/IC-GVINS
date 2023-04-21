@@ -21,8 +21,9 @@
  */
 
 #include "fileio/filesaver.h"
+#include <boost/format.hpp>
 
-#include <absl/strings/str_format.h>
+// #include <absl/strings/str_format.h>
 
 FileSaver::FileSaver(const string &filename, int columns, int filetype) {
     open(filename, columns, filetype);
@@ -52,11 +53,11 @@ void FileSaver::dump_(const vector<double> &data) {
     if (filetype_ == TEXT) {
         string line;
 
-        constexpr absl::string_view format = "%-15.9lf ";
+        boost::format format("%-15.9lf ");
 
-        line = absl::StrFormat(format, data[0]);
+        line = (format % data[0]).str();
         for (size_t k = 1; k < data.size(); k++) {
-            absl::StrAppendFormat(&line, format, data[k]);
+            line += (format % data[k]).str();
         }
 
         filefp_ << line << "\n";

@@ -169,7 +169,9 @@ GVINS::GVINS(const string &configfile, const string &outputpath, Drawer::Ptr dra
 bool GVINS::addNewImu(const IMU &imu) {
     if (imu_buffer_mutex_.try_lock()) {
         if (imu.dt > (imudatadt_ * 1.5)) {
-            LOGE << absl::StrFormat("Lost IMU data with at %0.3lf dt %0.3lf", imu.time, imu.dt);
+            boost::format fmt("Lost IMU data with at %0.3lf dt %0.3lf");
+
+            LOGE << (fmt % imu.time % imu.dt).str();
 
             long cnts = lround(imu.dt / imudatadt_) - 1;
 
@@ -572,11 +574,11 @@ void GVINS::setFinished() {
     Quaterniond q_b_c = Rotation::matrix2quaternion(pose_b_c_.R);
     Vector3d t_b_c    = pose_b_c_.t;
 
+    boost::format fmt("(%0.6lf, %0.6lf, %0.6lf, %0.6lf), (%0.3lf, %0.3lf, %0.3lf), %0.4lf");
+
     LOGW << "GVINS has finished processing";
     LOGW << "Estimated extrinsics: "
-         << absl::StrFormat("(%0.6lf, %0.6lf, %0.6lf, %0.6lf), (%0.3lf, %0.3lf, "
-                            "%0.3lf), %0.4lf",
-                            q_b_c.x(), q_b_c.y(), q_b_c.z(), q_b_c.w(), t_b_c.x(), t_b_c.y(), t_b_c.z(), td_b_c_);
+         << (fmt % q_b_c.x() % q_b_c.y() % q_b_c.z() % q_b_c.w() % t_b_c.x() % t_b_c.y() % t_b_c.z() % td_b_c_).str();
 
     Logging::shutdownLogging();
 }
