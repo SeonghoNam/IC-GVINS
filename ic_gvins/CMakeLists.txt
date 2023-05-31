@@ -60,6 +60,12 @@ target_link_libraries(ic_gvins_core ${Pangolin_LIBRARIES} GL GLU GLEW glut)
 add_executable(run_kitti app/run_kitti.cc)
 target_link_libraries(run_kitti ic_gvins_core)
 
+add_executable(run_air app/run_air.cpp)
+target_link_libraries(run_air ic_gvins_core)
+
+add_executable(run_airimg app/run_airimg.cpp)
+target_link_libraries(run_airimg ic_gvins_core)
+
 # # abseil
 # set(ABSL_PROPAGATE_CXX_STD true)
 # add_subdirectory(thirdparty/abseil-cpp abseil-cpp)

@@ -13,9 +13,9 @@ VisualOdometry::VisualOdometry(std::string &config_path) : config_file_path_(con
 bool VisualOdometry::Init()
 {
     YAML::Node config;
-    std::string configfile = "./config/default.yaml";
+    // std::string configfile = "./config/default.yaml";
     try {
-        config = YAML::LoadFile(configfile);
+        config = YAML::LoadFile(config_file_path_);
     } catch (YAML::Exception &exception) {
         std::cout << "Failed to open configuration file" << std::endl;
         return false;
@@ -23,7 +23,6 @@ bool VisualOdometry::Init()
 
     // bool is_use_visualization_ = config["is_use_visualization"].as<bool>();
 
-    DatasetType dataset_type;
     auto str_dataset_type = config["dataset_type"].as<std::string>();
     auto str_dataset_dir = config["dataset_dir"].as<std::string>();
 
@@ -33,9 +32,12 @@ bool VisualOdometry::Init()
     else if (str_dataset_type == "AIR")
         dataset_ =
             std::static_pointer_cast<Dataset>(std::make_shared<AIRDataset>(str_dataset_dir));
+    else if (str_dataset_type == "AIRIMG")
+        dataset_ =
+            std::static_pointer_cast<Dataset>(std::make_shared<AerialImageDataset>(str_dataset_dir));
 
     // create components and links
-    dataset_->Init();
+    dataset_->Init(config_file_path_);
 
 
     map_    = std::make_shared<Map>(20);
@@ -46,12 +48,12 @@ bool VisualOdometry::Init()
         drawer_thread_ = std::thread(&Drawer::run, drawer_);
     // }
 
-    frontend_ = std::make_shared<Tracking>(dataset_->GetCamera(0), map_, drawer_, configfile, "./output/");
+    frontend_ = std::make_shared<Tracking>(dataset_->GetCamera(0), map_, drawer_, config_file_path_, "./output/");
 
-    // backend_ = Backend::Ptr(new Backend);
+    backend_ = Backend::Ptr(new Backend);
     
-    // backend_->SetMap(map_);
-    // backend_->SetCameras(dataset_->GetCamera(0));
+    backend_->SetMap(map_);
+    backend_->SetCameras(dataset_->GetCamera(0));
 
     return true;
 }
@@ -94,8 +96,8 @@ bool VisualOdometry::Step()
     if(frontend_->isNewKeyFrame() || trackstate == TRACK_FIRST_FRAME || trackstate == TRACK_LOST) 
     {
         map_->insertKeyFrame(new_frame);
-        // if(trackstate != TRACK_FIRST_FRAME)
-        //     backend_->UpdateMap();
+        if(trackstate != TRACK_FIRST_FRAME)
+            backend_->UpdateMap();
 
         while(map_->isMaximumKeframes())
         {
@@ -103,7 +105,8 @@ bool VisualOdometry::Step()
             frame->resetKeyFrame();
             map_->removeKeyFrame(frame, false);
         }
-        drawer_->updateMap(Tracking::pose2Twc(frontend_->getCurrentPose()));
+        
+        drawer_->updateMap(frontend_->pose2Twc(frontend_->getCurrentPose()));
     }
     return true;
 }

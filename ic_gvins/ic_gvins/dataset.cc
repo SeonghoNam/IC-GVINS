@@ -14,12 +14,12 @@ Dataset::Dataset(const std::string &dataset_path) : dataset_path_(dataset_path)
 {
 }
 
-bool KITTIDataset::Init()
+bool KITTIDataset::Init(std::string config_file)
 {
     YAML::Node config;
-    std::string configfile = "./config/default.yaml";
+    // std::string configfile = "./config/default.yaml";
     try {
-        config = YAML::LoadFile(configfile);
+        config = YAML::LoadFile(config_file);
     } catch (YAML::Exception &exception) {
         std::cout << "Failed to open configuration file" << std::endl;
         return false;
@@ -106,14 +106,14 @@ Frame::Ptr KITTIDataset::NextFrame()
     return new_frame;
 }
 
-bool AIRDataset::Init()
+bool AIRDataset::Init(std::string config_file)
 {
     Vector3d t(0, 0, 0);
     // first camera
     YAML::Node config;
-    std::string configfile = "./config/default.yaml";
+    // std::string configfile = "./config/default.yaml";
     try {
-        config = YAML::LoadFile(configfile);
+        config = YAML::LoadFile(config_file);
     } catch (YAML::Exception &exception) {
         std::cout << "Failed to open configuration file" << std::endl;
         return false;
@@ -145,10 +145,13 @@ bool AIRDataset::Init()
             {
                 items.emplace_back(field);
             }
+            if(items.empty())
+                continue;
 
             // get filename, filename as "image_00000,jpg", remove "" at the begin and end
-            items[0].erase(items[0].begin());
-            items[0].erase(items[0].end() - 1);
+            // items[0].erase(items[0].begin());
+            // items[0].erase(items[0].end() - 1);
+            
             filenames_.emplace_back(items[0]);
 
             // get pose
@@ -159,13 +162,16 @@ bool AIRDataset::Init()
             // qw, qx, qy, qz in Eigen:Quaternion
             Eigen::Quaterniond quat(std::stod(items[14]), std::stod(items[11]), std::stod(items[12]),
                                     std::stod(items[13]));
-            quat.normalize(); // normalize due to precision error from reading data
-            poses.block<3, 3>(0, 0) = quat.toRotationMatrix();
+            // Eigen::Quaterniond quat(std::stod(items[7]), std::stod(items[4]), std::stod(items[5]),
+            //                         std::stod(items[6]));
+            quat.normalize(); // normalize due to precision error from reading data;
+            poses.block<3, 3>(0, 0) = quat.toRotationMatrix().transpose();
+
             gt_poses_.emplace_back(poses);
 
             // no time stamps in AIR dataset, so we generate
             time_stamps_.emplace_back(time);
-            time += 1 / 50;
+            time += 1. / 50;
         }
     }
 
@@ -203,8 +209,75 @@ Frame::Ptr AIRDataset::NextFrame()
     // SE3 pose(R, t);
 
     auto new_frame = Frame::createFrame(time_stamps_[current_image_index_], image);
-    new_frame->setPose(Pose({R.transpose(),t}));
+    new_frame->setPose(Pose({R,t}));
     current_image_index_++;
     return new_frame;
 }
 
+
+bool AerialImageDataset::Init(std::string config_file)
+{
+    Vector3d t(0, 0, 0);
+    // first camera
+    YAML::Node config;
+    // std::string configfile = "./config/default.yaml";
+    try {
+        config = YAML::LoadFile(config_file);
+    } catch (YAML::Exception &exception) {
+        std::cout << "Failed to open configuration file" << std::endl;
+        return false;
+    }
+    // Camera parameters
+    vector<double> intrinsic  = config["cam0"]["intrinsic"].as<std::vector<double>>();
+    vector<double> distortion = config["cam0"]["distortion"].as<std::vector<double>>();
+    vector<int> resolution    = config["cam0"]["resolution"].as<std::vector<int>>();
+
+    Camera::Ptr camera1 = Camera::createCamera(intrinsic, distortion, resolution);
+    cameras_.push_back(camera1);
+
+    // Load gt
+    Matrix4d poses;
+    double time = 0;
+    for(int i = 0; i < 101; i++)
+    {
+        // get pose
+        poses.setIdentity();
+        poses(0, 3) = 100*i;
+        
+
+        gt_poses_.emplace_back(poses);
+
+        // no time stamps in AIR dataset, so we generate
+        time_stamps_.emplace_back(time);
+        time += 1;
+    }
+
+    current_image_index_ = 0;
+    return true;
+}
+
+Frame::Ptr AerialImageDataset::NextFrame()
+{
+    cv::Mat image;
+
+    boost::format fmt("%s/imgseqpng%04d.png");
+    image = cv::imread((fmt % dataset_path_ % (current_image_index_+1)).str(), cv::IMREAD_GRAYSCALE);
+
+    if (image.data == nullptr)
+    {
+        LOG(WARNING) << "cannot find images at index " << current_image_index_;
+        return nullptr;
+    }
+
+    // normalize rotation matrix due to precision error from reading data
+    Matrix3d R = gt_poses_[current_image_index_].block<3, 3>(0, 0);
+    // R = R + 0.5 * (Mat33::Identity() - R * R.transpose()) * R;
+    Vector3d t = gt_poses_[current_image_index_].block<3, 1>(0, 3);
+
+    // SE3 pose(gt_poses_[current_image_index_]);
+
+    auto new_frame = Frame::createFrame(time_stamps_[current_image_index_], image);
+    new_frame->setPose(Pose{R, t});
+    current_image_index_++;
+    return new_frame;
+}

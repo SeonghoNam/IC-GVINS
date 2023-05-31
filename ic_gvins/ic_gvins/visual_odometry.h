@@ -9,7 +9,7 @@
 #include "tracking/tracking.h"
 #include "dataset.h"
 #include "tracking/drawer.h"
-
+#include "backend.h"
 
 class VisualOdometry
 {
@@ -41,7 +41,7 @@ class VisualOdometry
     std::string config_file_path_;
 
     Tracking::Ptr frontend_ = nullptr;
-    // Backend::Ptr backend_ = nullptr;
+    Backend::Ptr backend_ = nullptr;
     Map::Ptr map_ = nullptr;
     Drawer::Ptr drawer_ = nullptr;
 
