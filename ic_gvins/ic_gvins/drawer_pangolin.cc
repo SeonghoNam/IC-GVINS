@@ -161,12 +161,12 @@ void DrawerPangolin::publishMapPoints() {
     }
 
     for (const auto &pts : fixed_mappoints_) {
-        glColor3f(red[0], blue[1], blue[2]);
+        glColor3f(blue[0], blue[1], blue[2]);
         glVertex3d(pts[0], pts[1], pts[2]);   
     }
     glEnd();
 
-    fixed_mappoints_.clear();
+    // fixed_mappoints_.clear();
 }
 
 void DrawerPangolin::publishOdometry() {

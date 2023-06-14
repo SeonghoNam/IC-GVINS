@@ -94,7 +94,6 @@ Frame::Ptr KITTIDataset::NextFrame()
     auto normal = [&] (double) {return distribution(generator_);};
     static Vector3d err;
     err += Vector3d::NullaryExpr(3, normal);
-    cout << err << "\n";
     t = t + err;
 
     // SE3 pose(gt_poses_[current_image_index_]);
@@ -236,21 +235,53 @@ bool AerialImageDataset::Init(std::string config_file)
     cameras_.push_back(camera1);
 
     // Load gt
-    Matrix4d poses;
-    double time = 0;
-    for(int i = 0; i < 101; i++)
+    boost::format fmt("%s/gt.txt");
+    ifstream file_gt((fmt % dataset_path_).str());
+    if (file_gt.is_open())
     {
-        // get pose
-        poses.setIdentity();
-        poses(0, 3) = 100*i;
-        
-
-        gt_poses_.emplace_back(poses);
-
-        // no time stamps in AIR dataset, so we generate
-        time_stamps_.emplace_back(time);
-        time += 1;
+        Matrix4d poses;
+        std::string line;
+        double time = 0;
+        while (!file_gt.eof())
+        {
+            std::getline(file_gt, line);
+            std::istringstream iss(line);
+            poses.setIdentity();
+            if (iss >> poses(0, 0) >> poses(0, 1) >> poses(0, 2) >> poses(0, 3) >> poses(1, 0) >> poses(1, 1) >>
+                poses(1, 2) >> poses(1, 3) >> poses(2, 0) >> poses(2, 1) >> poses(2, 2) >> poses(2, 3))
+            {
+                gt_poses_.emplace_back(poses);
+            }
+            // no time stamps in AIR dataset, so we generate
+            time_stamps_.emplace_back(time);
+            time += 1;
+        }
     }
+
+    // Matrix4d poses;
+    // double time = 0;
+    // boost::format fmt("%s/gt.txt");
+    // ifstream file_gt((fmt % dataset_path_).str());
+    // for(int i = 0; i < 150; i++)
+    // {
+    //     Matrix4d poses;
+    //     std::string line;
+    //     while (!file_gt.eof())
+    //     {
+    //         std::getline(file_gt, line);
+    //         std::istringstream iss(line);
+    //         poses.setIdentity();
+    //         if (iss >> poses(0, 0) >> poses(0, 1) >> poses(0, 2) >> poses(0, 3) >> poses(1, 0) >> poses(1, 1) >>
+    //             poses(1, 2) >> poses(1, 3) >> poses(2, 0) >> poses(2, 1) >> poses(2, 2) >> poses(2, 3))
+    //         {
+    //             gt_poses_.emplace_back(poses);
+    //         }
+    //     }
+
+    //     // no time stamps in AIR dataset, so we generate
+    //     time_stamps_.emplace_back(time);
+    //     time += 1;
+    // }
 
     current_image_index_ = 0;
     return true;

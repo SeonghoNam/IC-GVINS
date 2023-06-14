@@ -115,7 +115,7 @@ private:
     // 配置参数
     // Configurations for visual process
     const double TRACK_BLOCK_SIZE   = 200.0; // 特征提取分块大小
-    const int TRACK_PYRAMID_LEVEL   = 3;     // 光流跟踪金字塔层数
+    const int TRACK_PYRAMID_LEVEL   = 5;     // 光流跟踪金字塔层数
     const double TRACK_MIN_PARALLAX = 10.0;  // 三角化时最小的像素视差
     const double TRACK_MIN_INTERVAl = 0.08;  // 最短观测帧时间间隔
 

@@ -10,7 +10,7 @@
 
 # the dataset directory, change it to yours!
 dataset_type: AIRIMG
-dataset_dir: /mnt/hdd1/slam_dataset/AerialImage/100ms@3km
+dataset_dir: /mnt/hdd1/slam_dataset/AerialImage/CFT@3km
 
 viewer: true
 

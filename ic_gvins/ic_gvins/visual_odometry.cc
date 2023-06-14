@@ -82,7 +82,9 @@ void VisualOdometry::Run()
         }
     }
 
-    // backend_->Stop();
+    backend_->Stop();
+    drawer_->setFinished();
+    drawer_thread_.join();
     LOGI << "VO exit";
 }
 
@@ -103,7 +105,25 @@ bool VisualOdometry::Step()
         {
             auto frame = map_->oldestKeyFrame();
             frame->resetKeyFrame();
-            map_->removeKeyFrame(frame, false);
+
+            // vector<ulong> keyframeids = map_->orderedKeyFrames();
+            // auto latest_keyframe      = map_->latestKeyFrame();
+
+            // latest_keyframe->setKeyFrameState(KEYFRAME_NORMAL);
+
+            // // The marginalized mappoints, for visualization
+            // frame    = map_->keyframes().at(keyframeids[0]);
+            auto features = frame->features();
+            for (const auto &feature : features) {
+                auto mappoint = feature.second->getMapPoint();
+                if (feature.second->isOutlier() || !mappoint || mappoint->isOutlier()) {
+                    continue;
+                }
+                auto &pw = mappoint->pos();
+
+                drawer_->addNewFixedMappoint(pw);
+            }
+            map_->removeKeyFrame(frame, true);
         }
         
         drawer_->updateMap(frontend_->pose2Twc(frontend_->getCurrentPose()));
