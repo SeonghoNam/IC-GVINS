@@ -5,6 +5,7 @@
 
 #include <thread>
 
+#include "fileio/filesaver.h"
 #include "common/types.h"
 #include "tracking/tracking.h"
 #include "dataset.h"
@@ -49,6 +50,10 @@ class VisualOdometry
     Dataset::Ptr dataset_ = nullptr;
 
     std::thread drawer_thread_;
+
+    FileSaver::Ptr ptsfilesaver_;
+    FileSaver::Ptr trajfilesaver_;
+
 };
 
 #endif // vslam_VISUAL_ODOMETRY_H

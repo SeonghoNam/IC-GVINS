@@ -1,11 +1,11 @@
 cmake_minimum_required(VERSION 3.10)
 project(ic_gvins)
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 
 # Optimization
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -O3")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -O3")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pthread -Wall -O3")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread -Wall -O3")
 
 # Build GVINS library
 include_directories(
@@ -55,6 +55,11 @@ target_link_libraries(ic_gvins_core
 find_package(Pangolin REQUIRED)
 include_directories(${Pangolin_INCLUDE_DIRS})
 target_link_libraries(ic_gvins_core ${Pangolin_LIBRARIES} GL GLU GLEW glut)
+
+# Sophus
+find_package(Sophus REQUIRED)
+include_directories(${Sophus_INCLUDE_DIRS})
+target_link_libraries(ic_gvins_core Sophus::Sophus)
 
 # app
 add_executable(run_kitti app/run_kitti.cc)

@@ -6,7 +6,7 @@
 
 #include "tracking/frame.h"
 #include "tracking/map.h"
-
+#include "DEM.h"
 
 class Map;
 
@@ -40,6 +40,7 @@ class Backend
     std::shared_ptr<Map> map_;
     std::thread backend_thread_;
     std::mutex data_mutex_;
+    std::shared_ptr<DEM> dem_;
 
     std::condition_variable map_update_;
     std::atomic<bool> backend_running_;

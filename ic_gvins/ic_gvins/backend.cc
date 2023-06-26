@@ -5,6 +5,9 @@
 #else
 #include "factors/reprojection_factor.h"
 #include "factors/pose_parameterization.h"
+#include "factors/relativepose_factor.h"
+#include "factors/PositionDEMFactor.h"
+#include "factors/PositionDEMFactor.h"
 #endif
 // #include "vslam/config.h"
 #include "tracking/feature.h"
@@ -23,6 +26,7 @@ Backend::Backend()
 
     backend_running_.store(true);
     backend_thread_ = std::thread(std::bind(&Backend::BackendLoop, this));
+    dem_ = std::make_shared<DEM>();
 }
 
 void Backend::UpdateMap()
@@ -112,6 +116,18 @@ void Backend::Optimize()
             mappoint->addOptimizedTimes();
         }
     }
+    // // Relative Pose Factor
+    // auto sortedKeyframePoses_data = keyframePoses_data;
+    // std::sort(sortedKeyframePoses_data.begin(), sortedKeyframePoses_data.end(), [](const pair<int, struct pose_para> &a, const pair<int, struct pose_para> &b) {
+    //     return a.first < b.first;
+    // });
+    // for(int i = 0; i < sortedKeyframePoses_data.size(); i++)
+    // {
+    //     auto keyframePoses_prv = sortedKeyframePoses_data[i];
+    //     auto keyframePoses_cur = sortedKeyframePoses_data[i+1];
+    //     Pose Pose_prv_cur;
+    //     pose_prv_cur.R = keyframePoses_cur
+    // }
 
  // 外参
     // Extrinsic parameters

@@ -8,6 +8,20 @@
 
 VisualOdometry::VisualOdometry(std::string &config_path) : config_file_path_(config_path)
 {
+    const std::string outputpath = "./output";
+    // Output files
+    // navfilesaver_    = FileSaver::create(outputpath + "/gvins.nav", 11);
+    ptsfilesaver_    = FileSaver::create(outputpath + "/mappoint.txt", 3);
+    // statfilesaver_   = FileSaver::create(outputpath + "/statistics.txt", 3);
+    // extfilesaver_    = FileSaver::create(outputpath + "/extrinsic.txt", 3);
+    // imuerrfilesaver_ = FileSaver::create(outputpath + "/IMU_ERR.bin", 7, FileSaver::BINARY);
+    trajfilesaver_   = FileSaver::create(outputpath + "/trajectory.csv", 8);
+
+    // if (!navfilesaver_->isOpen() || !ptsfilesaver_->isOpen() || !statfilesaver_->isOpen() || !extfilesaver_->isOpen()) {
+    if (!ptsfilesaver_->isOpen() || !trajfilesaver_->isOpen()) {
+        LOGE << "Failed to open data file";
+        return;
+    }
 }
 
 bool VisualOdometry::Init()
@@ -74,7 +88,10 @@ void VisualOdometry::Run()
             Twc.block<3, 3>(0, 0) = pose.R;
             Twc.block<3, 1>(0, 3) = pose.t;
 
-            file_trajectory << Twc.row(0) << " " << Twc.row(1) << " " << Twc.row(2) << "\n";
+            file_trajectory << Twc(0,1) << " " << Twc(0,1) << " " << Twc(0,2) << " " << Twc(0,3) << " "
+                            << Twc(1,1) << " " << Twc(1,1) << " " << Twc(1,2) << " " << Twc(1,3) << " "
+                            << Twc(2,1) << " " << Twc(2,1) << " " << Twc(2,2) << " " << Twc(2,3) << "\n";
+
         }
         else
         {
@@ -122,6 +139,9 @@ bool VisualOdometry::Step()
                 auto &pw = mappoint->pos();
 
                 drawer_->addNewFixedMappoint(pw);
+
+                // Save these mappoints to file 
+                ptsfilesaver_->dump(vector<double>{pw.x(), pw.y(), pw.z()});
             }
             map_->removeKeyFrame(frame, true);
         }
