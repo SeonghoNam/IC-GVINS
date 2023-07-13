@@ -68,6 +68,7 @@ bool VisualOdometry::Init()
     
     backend_->SetMap(map_);
     backend_->SetCameras(dataset_->GetCamera(0));
+    backend_->SetTracking(frontend_);
 
     return true;
 }

@@ -9,7 +9,8 @@ public:
 	double getDEMAtLocation(double x, double y) const
 	{
 		//assert(isWithinRegion == true);
-
+		if(!isWithinRegion(x, y))
+			return 0.;
 		// bi-linear interpolation
 		double xidx = x2Index(x);
 		double yidx = y2Index(y);
@@ -36,6 +37,9 @@ public:
 
 	double getJacobianXAt(double x, double y) const
 	{
+		if(!isWithinRegion(x, y))
+			return 0.;
+
 		// double xidx = x2Index(x);
 
 		// int x1 = std::floor(xidx);
@@ -69,6 +73,8 @@ public:
 
 	double getJacobianYAt(double x, double y) const
 	{
+		if(!isWithinRegion(x, y))
+			return 0.;
 		// double yidx = y2Index(y);
 
 		// int y1 = std::floor(yidx);
@@ -110,7 +116,7 @@ public:
 			yData_[i] = 4.5604e3 + dy_ * i;
 
 		std::ifstream fdem;
-		fdem.open("../config/DEM.txt");
+		fdem.open("./config/DEM.txt");
 		if(!fdem.is_open())
 		{
 			std::cout << "DEM file open error \n";
@@ -133,7 +139,7 @@ public:
 	}
 	bool isWithinRegion(double x, double y) const
 	{
-		if (x < xData_[0] || x > xData_[XSize_-1] || y > yData_[0] || y > yData_[YSize_-1])
+		if (x < xData_[0] || x > xData_[XSize_-1] || y > yData_[0] || y < yData_[YSize_-1])
 			return false;
 		else
 			return true;

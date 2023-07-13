@@ -7,7 +7,7 @@
 #include "factors/pose_parameterization.h"
 #include "factors/relativepose_factor.h"
 #include "factors/PositionDEMFactor.h"
-#include "factors/PositionDEMFactor.h"
+#include "factors/MappointDEMFactor.h"
 #endif
 // #include "vslam/config.h"
 #include "tracking/feature.h"
@@ -181,6 +181,11 @@ void Backend::Optimize()
 
         auto ref_feature = ref_frame->features().find(mappoint->id())->second;
 
+        if(dem_->isWithinRegion(mappoint->pos()(0), mappoint->pos()(1)))
+        {
+            auto mp_factor = new MappointDEMFactorInvDepth(dem_, mappoint->pos()(2), ref_frame_pc, mappoint->pos());
+            auto mp_residual_block_id = problem.AddResidualBlock(mp_factor, loss_function, keyframePoses_data[ref_frame->keyFrameId()].pose, invdepth);
+        }
         auto observations = mappoint->observations();
         for (auto &observation : observations) {
             auto obs_feature = observation.lock();
@@ -257,6 +262,96 @@ void Backend::Optimize()
         mappoint->updateDepth(depth);
     }
 
+
+
+    // if (map_->keyframes().empty()) {
+    //     return false;
+    // }
+
+    // 移除非关键帧中的路标点, 不能在遍历中直接移除, 否则破坏了遍历
+    // Find outliers first and remove later
+    vector<MapPoint::Ptr> mappoints;
+    int num_outliers_mappoint = 0;
+    int num_outliers_feature  = 0;
+    int num1 = 0, num2 = 0, num3 = 0;
+    for (auto &landmark : map_->landmarks()) {
+        auto mappoint = landmark.second;
+        if (!mappoint || mappoint->isOutlier()) {
+            continue;
+        }
+
+        // 未参与优化的无效路标点
+        // Only those in the sliding window
+        if (invdepthlist_.find(mappoint->id()) == invdepthlist_.end()) {
+            continue;
+        }
+
+        // 路标点在滑动窗口内的所有观测
+        // All the observations for mappoint
+        vector<double> errors;
+        for (auto &observation : mappoint->observations()) {
+            auto feat = observation.lock();
+            if (!feat || feat->isOutlier()) {
+                continue;
+            }
+            auto frame = feat->getFrame();
+            if (!frame || !frame->isKeyFrame() || !map_->isKeyFrameInMap(frame)) {
+                continue;
+            }
+
+            auto pp = feat->keyPoint();
+
+            // 计算重投影误差
+            // Calculate the reprojection error
+            double error = camera_->reprojectionError(frame->pose(), mappoint->pos(), pp).norm();
+
+            // 大于3倍阈值, 则禁用当前观测
+            // Feature outlier
+            if (!tracking_->isGoodToTrack(pp, frame->pose(), mappoint->pos(), 3.0)) {
+                feat->setOutlier(true);
+                mappoint->decreaseUsedTimes();
+
+                // 如果当前观测帧是路标点的参考帧, 直接设置为outlier
+                // Mappoint
+                if (frame->id() == mappoint->referenceFrameId()) {
+                    mappoint->setOutlier(true);
+                    mappoints.push_back(mappoint);
+                    num_outliers_mappoint++;
+                    num1++;
+                    break;
+                }
+                num_outliers_feature++;
+            } else {
+                errors.push_back(error);
+            }
+        }
+
+        // 有效观测不足, 平均重投影误差较大, 则为粗差
+        // Mappoint outlier
+        if (errors.size() < 2) {
+            mappoint->setOutlier(true);
+            mappoints.push_back(mappoint);
+            num_outliers_mappoint++;
+            num2++;
+        } else {
+            double avg_error = std::accumulate(errors.begin(), errors.end(), 0.0) / static_cast<double>(errors.size());
+            if (avg_error > min_reprojerr_) {
+                mappoint->setOutlier(true);
+                mappoints.push_back(mappoint);
+                num_outliers_mappoint++;
+                num3++;
+            }
+        }
+    }
+
+    // 移除outliers
+    // Remove the mappoint outliers
+    for (auto &mappoint : mappoints) {
+        map_->removeMappoint(mappoint);
+    }
+
+    LOG(INFO) << "Culled " << num_outliers_mappoint << " mappoint with " << num_outliers_feature << " bad observed features "
+         << num1 << ", " << num2 << ", " << num3;
 #else
     // Map::ParamsType para_kfs = map_->GetPoseParams();
     // Map::ParamsType para_landmarks = map_->GetPointParams();

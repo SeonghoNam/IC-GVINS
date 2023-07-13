@@ -6,6 +6,7 @@
 
 #include "tracking/frame.h"
 #include "tracking/map.h"
+#include "tracking/tracking.h"
 #include "DEM.h"
 
 class Map;
@@ -28,6 +29,11 @@ class Backend
         map_ = map;
     }
 
+    void SetTracking(std::shared_ptr<Tracking> tracking)
+    {
+        tracking_ = tracking;
+    }
+
     void UpdateMap();
 
     void Stop();
@@ -36,6 +42,8 @@ class Backend
     void BackendLoop();
 
     void Optimize();
+
+    bool CullingOutliers();
 
     std::shared_ptr<Map> map_;
     std::thread backend_thread_;
@@ -46,6 +54,8 @@ class Backend
     std::atomic<bool> backend_running_;
 
     Camera::Ptr camera_ = nullptr;
+    Tracking::Ptr tracking_ = nullptr;
+
     double extrinsic_[8]{0};
     
     // parmaeter for backend

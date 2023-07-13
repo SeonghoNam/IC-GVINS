@@ -11,10 +11,6 @@ class PositionDEMFactor: public ceres::SizedCostFunction<1,3>
     {
         sqrt_information_ = 1./10.;
     }
-    ~PositionDEMFactor()
-    {
-        std::cout<< "~PositionDEMFactor" << "\n";
-    };
     virtual bool Evaluate(double const *const *parameters, double *residuals, double **jacobians) const
     {      
         Eigen::Map<Eigen::Vector3d const> xyz(parameters[0]);

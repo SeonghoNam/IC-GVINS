@@ -235,7 +235,7 @@ bool AerialImageDataset::Init(std::string config_file)
     cameras_.push_back(camera1);
 
     // Load gt
-    boost::format fmt("%s/gt.txt");
+    boost::format fmt("%s/gt_pure.txt");
     ifstream file_gt((fmt % dataset_path_).str());
     if (file_gt.is_open())
     {
