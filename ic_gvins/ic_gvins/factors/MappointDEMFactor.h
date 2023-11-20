@@ -52,7 +52,7 @@ class MappointDEMFactorInvDepth: public ceres::SizedCostFunction<1,7,1>
     MappointDEMFactorInvDepth(std::shared_ptr<DEM> pDEM, double height, Eigen::Vector3d pts0, Eigen::Vector3d pos)
         :pDEM_(pDEM), height_(height), pts0_(pts0), pos_(pos)
     {
-        sqrt_information_ = 1./10.;
+        sqrt_information_ = 1./1.;
     }
     virtual bool Evaluate(double const *const *parameters, double *residuals, double **jacobians) const
     {      
@@ -79,6 +79,7 @@ class MappointDEMFactorInvDepth: public ceres::SizedCostFunction<1,7,1>
         // Eigen::Map<double> residual(residuals);
 
         *residuals = sqrt_information_ * (height_ - pDEM_->getDEMAtLocation(xyz(0), xyz(1)));
+        std::cout << (height_ - pDEM_->getDEMAtLocation(xyz(0), xyz(1))) << "\n";
         if (jacobians)  // jacobians of residual z-h(x) not h(x)!!!!
         {
             Eigen::Matrix3d rotation_matrix = q0.toRotationMatrix();

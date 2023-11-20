@@ -153,6 +153,25 @@ void Backend::Optimize()
     problem.AddParameterBlock(&extrinsic_[7], 1);
     problem.SetParameterBlockConstant(&extrinsic_[7]);
 
+    // // Relative Pose Factor
+    // for (auto &keyframe1 : active_kfs)
+    // {   
+    //     Pose pose1 = keyframe1.second->pose();
+    //     if (active_kfs.find(keyframe1.first+1) == active_kfs.end())
+    //         continue;
+    //     auto keyframe2 = active_kfs[keyframe1.first+1];
+    //     Pose pose2 = keyframe2->pose();
+
+    //     Pose pose12;
+    //     pose12.t = pose2.R.transpose()*pose1.t - pose2.t;
+    //     pose12.R = pose2.R.transpose()*pose1.R;
+    //     // normalize
+    //     pose12.R = pose12.R + 0.5 * (Eigen::Matrix3d::Identity() - pose12.R * pose12.R.transpose()) * pose12.R;
+
+    //     auto relpose_factor = new RelativePoseFactor(pose12, 1.0);
+    //     problem.AddResidualBlock(relpose_factor, loss_function, keyframePoses_data[keyframe1.first].pose, keyframePoses_data[keyframe1.first+1].pose);
+    // }
+
     for (const auto &landmark : active_landmarks) {
         const auto &mappoint = landmark.second;
         if (!mappoint || mappoint->isOutlier()) {
@@ -181,11 +200,11 @@ void Backend::Optimize()
 
         auto ref_feature = ref_frame->features().find(mappoint->id())->second;
 
-        if(dem_->isWithinRegion(mappoint->pos()(0), mappoint->pos()(1)))
-        {
-            auto mp_factor = new MappointDEMFactorInvDepth(dem_, mappoint->pos()(2), ref_frame_pc, mappoint->pos());
-            auto mp_residual_block_id = problem.AddResidualBlock(mp_factor, loss_function, keyframePoses_data[ref_frame->keyFrameId()].pose, invdepth);
-        }
+        // if(dem_->isWithinRegion(mappoint->pos()(0), mappoint->pos()(1)))
+        // {
+        //    auto mp_factor = new MappointDEMFactorInvDepth(dem_, mappoint->pos()(2), ref_frame_pc, mappoint->pos());
+        //    auto mp_residual_block_id = problem.AddResidualBlock(mp_factor, loss_function, keyframePoses_data[ref_frame->keyFrameId()].pose, invdepth);
+        // }
         auto observations = mappoint->observations();
         for (auto &observation : observations) {
             auto obs_feature = observation.lock();
@@ -208,7 +227,7 @@ void Backend::Optimize()
 
             auto factor = new ReprojectionFactor(ref_frame_pc, obs_frame_pc, ref_feature->velocityInPixel(),
                                                  obs_feature->velocityInPixel(), ref_frame->timeDelay(),
-                                                 obs_frame->timeDelay(), 1.5);
+                                                 obs_frame->timeDelay(), 3.0);
             auto residual_block_id =
                 problem.AddResidualBlock(factor, loss_function, keyframePoses_data[ref_frame->keyFrameId()].pose,
                                          keyframePoses_data[obs_frame->keyFrameId()].pose, extrinsic_, invdepth, &extrinsic_[7]);
@@ -221,7 +240,7 @@ void Backend::Optimize()
     options.max_num_iterations = 20;
     ceres::Solver::Summary summary;
     ceres::Solve(options, &problem, &summary);
-    // LOG(INFO) << summary.FullReport();
+//    LOG(INFO) << summary.FullReport();
 
     
     // Update map from optimzed results
@@ -259,6 +278,7 @@ void Backend::Optimize()
         pc00 *= depth;
 
         mappoint->pos() = camera_->cam2world(pc00, mappoint->referenceFrame()->pose());
+//        std::cout << mappoint->pos()(2) - dem_->getDEMAtLocation(mappoint->pos()(0), mappoint->pos()(1)) << std::endl;
         mappoint->updateDepth(depth);
     }
 

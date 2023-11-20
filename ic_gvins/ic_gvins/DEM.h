@@ -140,7 +140,10 @@ public:
 	bool isWithinRegion(double x, double y) const
 	{
 		if (x < xData_[0] || x > xData_[XSize_-1] || y > yData_[0] || y < yData_[YSize_-1])
+		{
+			std::cout << "DEM is not defined in this region \n";
 			return false;
+		}
 		else
 			return true;
 	}
