@@ -8,7 +8,7 @@
 
 VisualOdometry::VisualOdometry(std::string &config_path) : config_file_path_(config_path)
 {
-    const std::string outputpath = "./output";
+    const std::string outputpath = "../output";
     // Output files
     // navfilesaver_    = FileSaver::create(outputpath + "/gvins.nav", 11);
     ptsfilesaver_    = FileSaver::create(outputpath + "/mappoint.txt", 3);
@@ -35,24 +35,13 @@ bool VisualOdometry::Init()
         return false;
     }
 
-    // bool is_use_visualization_ = config["is_use_visualization"].as<bool>();
 
-    auto str_dataset_type = config["dataset_type"].as<std::string>();
-    auto str_dataset_dir = config["dataset_dir"].as<std::string>();
+        // Camera parameters
+    vector<double> intrinsic  = config["cam0"]["intrinsic"].as<std::vector<double>>();
+    vector<double> distortion = config["cam0"]["distortion"].as<std::vector<double>>();
+    vector<int> resolution    = config["cam0"]["resolution"].as<std::vector<int>>();
 
-    if (str_dataset_type== "KITTI")
-        dataset_ =
-            std::static_pointer_cast<Dataset>(std::make_shared<KITTIDataset>(str_dataset_dir));
-    else if (str_dataset_type == "AIR")
-        dataset_ =
-            std::static_pointer_cast<Dataset>(std::make_shared<AIRDataset>(str_dataset_dir));
-    else if (str_dataset_type == "AIRIMG")
-        dataset_ =
-            std::static_pointer_cast<Dataset>(std::make_shared<AerialImageDataset>(str_dataset_dir));
-
-    // create components and links
-    dataset_->Init(config_file_path_);
-
+    cam_ = Camera::createCamera(intrinsic, distortion, resolution);
 
     map_    = std::make_shared<Map>(20);
     drawer_ = std::make_shared<DrawerPangolin>();
@@ -62,12 +51,12 @@ bool VisualOdometry::Init()
         drawer_thread_ = std::thread(&Drawer::run, drawer_);
     // }
 
-    frontend_ = std::make_shared<Tracking>(dataset_->GetCamera(0), map_, drawer_, config_file_path_, "./output/");
+    frontend_ = std::make_shared<Tracking>(cam_, map_, drawer_, config_file_path_, "../output/");
 
-    backend_ = Backend::Ptr(new Backend);
+    backend_ = std::make_shared<Backend>();
     
     backend_->SetMap(map_);
-    backend_->SetCameras(dataset_->GetCamera(0));
+    backend_->SetCameras(cam_);
     backend_->SetTracking(frontend_);
 
     return true;
@@ -75,11 +64,11 @@ bool VisualOdometry::Init()
 
 void VisualOdometry::Run()
 {
-    std::ofstream file_trajectory("./output/00_pred.txt");
+    std::ofstream file_trajectory("../output/00_pred.txt");
 
     while (1)
     {
-        if (Step())
+        if (false)
         {
             Pose pose = frontend_->getCurrentPose();
             Eigen::Matrix4d Twc;
@@ -99,16 +88,17 @@ void VisualOdometry::Run()
             break;
         }
     }
+}
 
+void VisualOdometry::Finish()
+{
     backend_->Stop();
     drawer_->setFinished();
     drawer_thread_.join();
     LOGI << "VO exit";
 }
-
-bool VisualOdometry::Step()
+bool VisualOdometry::Step(Frame::Ptr new_frame)
 {
-    Frame::Ptr new_frame = dataset_->NextFrame();
     if (new_frame == nullptr)
         return false;
 
@@ -119,17 +109,17 @@ bool VisualOdometry::Step()
         if(trackstate != TRACK_FIRST_FRAME)
             backend_->UpdateMap();
 
-        while(map_->isMaximumKeframes())
+        if(map_->isMaximumKeframes())
         {
             auto frame = map_->oldestKeyFrame();
-            frame->resetKeyFrame();
+            // frame->resetKeyFrame();
 
             // vector<ulong> keyframeids = map_->orderedKeyFrames();
             // auto latest_keyframe      = map_->latestKeyFrame();
 
             // latest_keyframe->setKeyFrameState(KEYFRAME_NORMAL);
 
-            // // The marginalized mappoints, for visualization
+            // The marginalized mappoints, for visualization
             // frame    = map_->keyframes().at(keyframeids[0]);
             auto features = frame->features();
             for (const auto &feature : features) {
@@ -144,7 +134,7 @@ bool VisualOdometry::Step()
                 // Save these mappoints to file 
                 ptsfilesaver_->dump(vector<double>{pw.x(), pw.y(), pw.z()});
             }
-            map_->removeKeyFrame(frame, true);
+            // map_->removeKeyFrame(frame, true);
         }
         
         drawer_->updateMap(frontend_->pose2Twc(frontend_->getCurrentPose()));

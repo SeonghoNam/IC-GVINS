@@ -14,23 +14,8 @@ Dataset::Dataset(const std::string &dataset_path) : dataset_path_(dataset_path)
 {
 }
 
-bool KITTIDataset::Init(std::string config_file)
+bool KITTIDataset::Init()
 {
-    YAML::Node config;
-    // std::string configfile = "./config/default.yaml";
-    try {
-        config = YAML::LoadFile(config_file);
-    } catch (YAML::Exception &exception) {
-        std::cout << "Failed to open configuration file" << std::endl;
-        return false;
-    }
-    // Camera parameters
-    vector<double> intrinsic  = config["cam0"]["intrinsic"].as<std::vector<double>>();
-    vector<double> distortion = config["cam0"]["distortion"].as<std::vector<double>>();
-    vector<int> resolution    = config["cam0"]["resolution"].as<std::vector<int>>();
-
-    Camera::Ptr camera1 = Camera::createCamera(intrinsic, distortion, resolution);
-    cameras_.push_back(camera1);
 
     // Load timestamps
     boost::format fmt_t("%s/times.txt");
@@ -105,25 +90,8 @@ Frame::Ptr KITTIDataset::NextFrame()
     return new_frame;
 }
 
-bool AIRDataset::Init(std::string config_file)
+bool AIRDataset::Init()
 {
-    Vector3d t(0, 0, 0);
-    // first camera
-    YAML::Node config;
-    // std::string configfile = "./config/default.yaml";
-    try {
-        config = YAML::LoadFile(config_file);
-    } catch (YAML::Exception &exception) {
-        std::cout << "Failed to open configuration file" << std::endl;
-        return false;
-    }
-    // Camera parameters
-    vector<double> intrinsic  = config["cam0"]["intrinsic"].as<std::vector<double>>();
-    vector<double> distortion = config["cam0"]["distortion"].as<std::vector<double>>();
-    vector<int> resolution    = config["cam0"]["resolution"].as<std::vector<int>>();
-
-    Camera::Ptr camera1 = Camera::createCamera(intrinsic, distortion, resolution);
-    cameras_.push_back(camera1);
 
     // Load gt
     boost::format fmt("%s/metadata.csv");
@@ -214,25 +182,9 @@ Frame::Ptr AIRDataset::NextFrame()
 }
 
 
-bool AerialImageDataset::Init(std::string config_file)
+bool AerialImageDataset::Init()
 {
     Vector3d t(0, 0, 0);
-    // first camera
-    YAML::Node config;
-    // std::string configfile = "./config/default.yaml";
-    try {
-        config = YAML::LoadFile(config_file);
-    } catch (YAML::Exception &exception) {
-        std::cout << "Failed to open configuration file" << std::endl;
-        return false;
-    }
-    // Camera parameters
-    vector<double> intrinsic  = config["cam0"]["intrinsic"].as<std::vector<double>>();
-    vector<double> distortion = config["cam0"]["distortion"].as<std::vector<double>>();
-    vector<int> resolution    = config["cam0"]["resolution"].as<std::vector<int>>();
-
-    Camera::Ptr camera1 = Camera::createCamera(intrinsic, distortion, resolution);
-    cameras_.push_back(camera1);
 
     // Load gt
     boost::format fmt("%s/gt_pure.txt");

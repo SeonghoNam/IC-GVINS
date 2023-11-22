@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.10)
 project(ic_gvins)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 14)
 
 # Optimization
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pthread -Wall -O3")
@@ -62,7 +62,7 @@ include_directories(${Sophus_INCLUDE_DIRS})
 target_link_libraries(ic_gvins_core Sophus::Sophus)
 
 # app
-add_executable(run_kitti app/run_kitti.cc)
+add_executable(run_kitti app/run_kitti.cpp)
 target_link_libraries(run_kitti ic_gvins_core)
 
 add_executable(run_air app/run_air.cpp)

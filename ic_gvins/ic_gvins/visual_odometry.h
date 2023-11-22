@@ -8,7 +8,6 @@
 #include "fileio/filesaver.h"
 #include "common/types.h"
 #include "tracking/tracking.h"
-#include "dataset.h"
 #include "tracking/drawer.h"
 #include "backend.h"
 
@@ -32,10 +31,12 @@ class VisualOdometry
      */
     void Run();
 
+    void Finish();
+
     /**
      * Make a step forward in dataset
      */
-    bool Step();
+    bool Step(Frame::Ptr new_frame);
 
   private:
     bool inited_ = false;
@@ -45,9 +46,8 @@ class VisualOdometry
     Backend::Ptr backend_ = nullptr;
     Map::Ptr map_ = nullptr;
     Drawer::Ptr drawer_ = nullptr;
+    Camera::Ptr cam_ = nullptr;
 
-    // dataset
-    Dataset::Ptr dataset_ = nullptr;
 
     std::thread drawer_thread_;
 

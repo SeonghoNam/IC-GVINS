@@ -116,7 +116,7 @@ public:
 			yData_[i] = 4.5604e3 + dy_ * i;
 
 		std::ifstream fdem;
-		fdem.open("./config/DEM.txt");
+		fdem.open("../config/DEM.txt");
 		if(!fdem.is_open())
 		{
 			std::cout << "DEM file open error \n";

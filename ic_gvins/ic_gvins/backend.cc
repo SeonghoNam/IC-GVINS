@@ -372,6 +372,34 @@ void Backend::Optimize()
 
     LOG(INFO) << "Culled " << num_outliers_mappoint << " mappoint with " << num_outliers_feature << " bad observed features "
          << num1 << ", " << num2 << ", " << num3;
+
+    if(map_->isMaximumKeframes())
+    {
+        auto frame = map_->oldestKeyFrame();
+        frame->resetKeyFrame();
+
+        // vector<ulong> keyframeids = map_->orderedKeyFrames();
+        // auto latest_keyframe      = map_->latestKeyFrame();
+
+        // latest_keyframe->setKeyFrameState(KEYFRAME_NORMAL);
+
+        // The marginalized mappoints, for visualization
+        // frame    = map_->keyframes().at(keyframeids[0]);
+        auto features = frame->features();
+        for (const auto &feature : features) {
+            auto mappoint = feature.second->getMapPoint();
+            if (feature.second->isOutlier() || !mappoint || mappoint->isOutlier()) {
+                continue;
+            }
+            auto &pw = mappoint->pos();
+
+            //drawer_->addNewFixedMappoint(pw);
+
+            // Save these mappoints to file 
+            //ptsfilesaver_->dump(vector<double>{pw.x(), pw.y(), pw.z()});
+        }
+        map_->removeKeyFrame(frame, true);
+    }
 #else
     // Map::ParamsType para_kfs = map_->GetPoseParams();
     // Map::ParamsType para_landmarks = map_->GetPointParams();
