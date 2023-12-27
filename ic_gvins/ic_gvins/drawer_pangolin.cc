@@ -48,8 +48,10 @@ void DrawerPangolin::run() {
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    pangolin::OpenGlRenderState vis_camera(pangolin::ProjectionMatrix(1024, 768, 400, 400, 512, 384, 0.1, 1000),
-                                           pangolin::ModelViewLookAt(0, -5, -10, 0, 0, 0, 0.0, -1.0, 0.0));
+//    pangolin::OpenGlRenderState vis_camera(pangolin::ProjectionMatrix(1024, 768, 400, 400, 512, 384, 0.1, 1000),
+//                                           pangolin::ModelViewLookAt(0, -5, -10, 0, 0, 0, 0.0, -1.0, 0.0));
+    pangolin::OpenGlRenderState vis_camera(pangolin::ProjectionMatrix(1024, 768, 400, 400, 512, 384, 0.1, 10000),
+                                           pangolin::ModelViewLookAt(0, 10, 10000, 0, 0, -1.0, 0.0, 0.0, -1.0));
 
     // Add named OpenGL viewport to window and provide 3D Handler
     pangolin::View &vis_display = pangolin::CreateDisplay()

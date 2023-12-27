@@ -4,8 +4,8 @@ project(ic_gvins)
 set(CMAKE_CXX_STANDARD 14)
 
 # Optimization
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pthread -Wall -O3")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread -Wall -O3")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pthread -Wall")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread -Wall")
 
 # Build GVINS library
 include_directories(

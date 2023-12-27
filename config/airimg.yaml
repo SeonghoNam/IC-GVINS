@@ -72,8 +72,8 @@ track_max_features: 200         # 最大提取特征数量 (The maximum features
 reprojection_error_std: 1.5         # 像素重投影误差 (The reprojection error std for optimizition and outlier culling)
 optimize_windows_size: 10           # 滑动窗口大小 (The size of the sliding window, number of the keyframes )
 optimize_num_iterations: 20         # 优化迭代次数 (The iterations in total)
-optimize_estimate_extrinsic: true   # 是否估计相机和IMU的外参 (Estimate the extrinsic)
-optimize_estimate_td: true          # 否估计相机和IMU之间的时间间隔 (Estimate the time delay)
+optimize_estimate_extrinsic: false   # 是否估计相机和IMU的外参 (Estimate the extrinsic)
+optimize_estimate_td: false          # 否估计相机和IMU之间的时间间隔 (Estimate the time delay)
 
 # # Camera parameters
 # cam0:
@@ -142,8 +142,8 @@ cam0:
     # 相机IMU外参 (Camera-IMU extrinsic)
     # Pb = q_b_c * Pc + t_b_c
     # q (x, y, z, w)
-    q_b_c: [0.497766, 0.502679, 0.501396, 0.498141]
-    t_b_c: [0.074, -0.030, 0.128]
+    q_b_c: [0., 0., 0., 0.]
+    t_b_c: [0., 0., 0.]
 
     # IMU和相机时间延时 (The time delay between the IMU and camera)
     # t_i = t_c + td

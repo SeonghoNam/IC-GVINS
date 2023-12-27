@@ -1,11 +1,14 @@
 #include "visual_odometry.h"
 #include <yaml-cpp/yaml.h>
 #include "dataset.h"
+#include "ic_gvins2.h"
+#include "drawer_pangolin.h"
+#include "common/earth.h"
+#include "common/rotation.h"
+#include "common/logging.h"
 int main(int argc, char **argv)
 {
-    char cwd[1024];
-    getcwd(cwd, sizeof(cwd));
-    printf("Current working dir: %s\n", cwd);
+    Logging::initialization(argv, true, true);
     std::string config_file = "../config/kitti.yaml";
     YAML::Node config;
     try {
@@ -19,19 +22,59 @@ int main(int argc, char **argv)
 
     KITTIDataset dataset_(str_dataset_dir);
 
-    VisualOdometry::Ptr vo(new VisualOdometry(config_file));
+    // VisualOdometry::Ptr vo(new VisualOdometry(config_file));
+    // assert(vo->Init() == true);
+    // int image_index = 0;
+    // while(1)
+    // {
+    //     Frame::Ptr new_frame = dataset_.CreateFrame(image_index);
+    //     if(new_frame == nullptr)
+    //         break;
+    //     else
+    //     {
+    //         new_frame->setPose(dataset_.GetPose(image_index));
+    //         vo->Step(new_frame);
+    //     }
+    //     image_index++;
+    // }
+    // vo->Finish();
 
-    
-    assert(vo->Init() == true);
+
+    GVINS2::Ptr gvins_ = nullptr;
+    std::string outputpath = "../output/";
+
+    Drawer::Ptr drawer = std::make_shared<DrawerPangolin>();
+    gvins_             = std::make_shared<GVINS2>(config_file, outputpath, drawer);
+
+    int image_index = 0;
+    Vector3d origin (39.9928 * D2R, 116.3529 * D2R, 0.0);
+    gvins_->setWorldOrigin(origin);
     while(1)
     {
-        Frame::Ptr new_frame = dataset_.NextFrame();
+        Frame::Ptr new_frame = dataset_.CreateFrame(image_index);
         if(new_frame == nullptr)
             break;
         else
-            vo->Step(new_frame);
+        {
+            if(gvins_->isFrameBufferEmpty())
+            {
+                PVA pva;
+                Pose pose = dataset_.GetPose(image_index);
+                pva.time = new_frame->stamp()+0.005;
+                pva.blh = Earth::local2global(origin, pose.t);
+                pva.att = Rotation::matrix2euler(pose.R);
+                new_frame->setPose(pose);
+                gvins_->addNewFrame(new_frame);
+                gvins_->addNewPVA(pva);
+            }
+            else
+            {
+                usleep(3000);
+            }
+        }
+        image_index++;
     }
-    vo->Finish();
+    gvins_->setFinished();
 
     return 0;
 }

@@ -35,7 +35,9 @@ class KITTIDataset : public Dataset
       Init();
     }
     bool Init();
-    Frame::Ptr NextFrame();
+    Frame::Ptr NextFrame(){};
+    Frame::Ptr CreateFrame(int image_index);
+    Pose GetPose(int image_index);
 };
 
 class AIRDataset : public Dataset
@@ -61,6 +63,8 @@ class AerialImageDataset : public Dataset
     }
     bool Init();
     Frame::Ptr NextFrame();
+    Frame::Ptr CreateFrame(int image_index);
+    Pose GetPose(int image_index);
 };
 
 

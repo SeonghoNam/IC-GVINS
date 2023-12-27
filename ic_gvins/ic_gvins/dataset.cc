@@ -56,38 +56,30 @@ bool KITTIDataset::Init()
     return true;
 }
 
-Frame::Ptr KITTIDataset::NextFrame()
+Frame::Ptr KITTIDataset::CreateFrame(int image_index)
 {
     cv::Mat image;
 
     boost::format fmt("%s/image_%d/%06d.png");
-    image = cv::imread((fmt % dataset_path_ % 0 % current_image_index_).str(), cv::IMREAD_GRAYSCALE);
+    image = cv::imread((fmt % dataset_path_ % 0 % image_index).str(), cv::IMREAD_GRAYSCALE);
 
     if (image.data == nullptr)
     {
-        LOGW << "cannot find images at index " << current_image_index_;
+        LOGW << "cannot find images at index " << image_index;
         return nullptr;
     }
 
-    // normalize rotation matrix due to precision error from reading data
-    Matrix3d R = gt_poses_[current_image_index_].block<3, 3>(0, 0);
-    R = R + 0.5 * (Matrix3d::Identity() - R * R.transpose()) * R;
-    Vector3d t = gt_poses_[current_image_index_].block<3, 1>(0, 3);
+    auto new_frame = Frame::createFrame(time_stamps_[image_index], image);
 
-    // add noise (to position)
-    std::normal_distribution<double> distribution(0, 0.1 * 1/10);
-    auto normal = [&] (double) {return distribution(generator_);};
-    static Vector3d err;
-    err += Vector3d::NullaryExpr(3, normal);
-    t = t + err;
-
-    // SE3 pose(gt_poses_[current_image_index_]);
-    // SE3 pose(R, t);
-
-    auto new_frame = Frame::createFrame(time_stamps_[current_image_index_], image);
-    new_frame->setPose(Pose({R,t}));
-    current_image_index_++;
     return new_frame;
+}
+
+Pose KITTIDataset::GetPose(int image_index)
+{
+    Matrix3d R = gt_poses_[image_index].block<3, 3>(0, 0);
+    R = R + 0.5 * (Matrix3d::Identity() - R * R.transpose()) * R;
+    Vector3d t = gt_poses_[image_index].block<3, 1>(0, 3);
+    return Pose({R,t});
 }
 
 bool AIRDataset::Init()
@@ -263,4 +255,32 @@ Frame::Ptr AerialImageDataset::NextFrame()
     new_frame->setPose(Pose{R, t});
     current_image_index_++;
     return new_frame;
+}
+
+Frame::Ptr AerialImageDataset::CreateFrame(int image_index)
+{
+    cv::Mat image;
+
+    boost::format fmt("%s/imgseqpng%04d.png");
+    image = cv::imread((fmt % dataset_path_ % (image_index+1)).str(), cv::IMREAD_GRAYSCALE);
+
+    if (image.data == nullptr)
+    {
+        LOG(WARNING) << "cannot find images at index " << image_index;
+        return nullptr;
+    }
+
+    auto new_frame = Frame::createFrame(time_stamps_[image_index], image);
+
+    return new_frame;
+}
+
+Pose AerialImageDataset::GetPose(int image_index)
+{
+    // normalize rotation matrix due to precision error from reading data
+    Matrix3d R = gt_poses_[image_index].block<3, 3>(0, 0);
+    R = R + 0.5 * (Matrix3d::Identity() - R * R.transpose()) * R;
+    Vector3d t = gt_poses_[image_index].block<3, 1>(0, 3);
+
+    return Pose{R, t};
 }
