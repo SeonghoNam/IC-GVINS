@@ -284,3 +284,118 @@ Pose AerialImageDataset::GetPose(int image_index)
 
     return Pose{R, t};
 }
+
+
+bool CFTDataset::Init()
+{
+    // Load gt
+    boost::format fmt("%s/metadata.csv");
+    ifstream file_gt((fmt % dataset_path_).str());
+    if (file_gt.is_open())
+    {
+        Matrix4d poses;
+        std::string line;
+        std::getline(file_gt, line);
+        while (!file_gt.eof())
+        {
+            std::vector<std::string> items;
+            std::getline(file_gt, line);
+            std::istringstream iss(line);
+            std::string field;
+            while (std::getline(iss, field, ','))
+            {
+                items.emplace_back(field);
+            }
+            if(items.empty())
+                continue;
+
+            // get filename, filename as "image_00000,jpg", remove "" at the begin and end
+            // items[0].erase(items[0].begin());
+            // items[0].erase(items[0].end() - 1);
+            
+            filenames_.emplace_back(items[1]);
+
+            // get pose
+            poses.setIdentity();
+            poses(0, 3) = std::stod(items[2]);
+            poses(1, 3) = std::stod(items[3]);
+            poses(2, 3) = std::stod(items[4]);
+            // qw, qx, qy, qz in Eigen:Quaternion
+            Eigen::Quaterniond quat(std::stod(items[5]), std::stod(items[6]), std::stod(items[7]),
+                                    std::stod(items[8]));
+            // Eigen::Quaterniond quat(std::stod(items[7]), std::stod(items[4]), std::stod(items[5]),
+            //                         std::stod(items[6]));
+            quat.normalize(); // normalize due to precision error from reading data;
+            poses.block<3, 3>(0, 0) = quat.toRotationMatrix();
+
+            gt_poses_.emplace_back(poses);
+
+            time_stamps_.emplace_back(std::stod(items[0]));
+        }
+    }
+
+    // Load timestamp
+
+    current_image_index_ = 0;
+    return true;
+}
+
+Frame::Ptr CFTDataset::NextFrame()
+{
+    cv::Mat image;
+
+    if (current_image_index_ >= filenames_.size())
+    {
+        LOGW << "End of dataset files";
+        return nullptr;
+    }
+
+    boost::format fmt("%s/%s");
+    image = cv::imread((fmt % dataset_path_ % filenames_[current_image_index_]).str(), cv::IMREAD_GRAYSCALE);
+
+    if (image.data == nullptr)
+    {
+        LOGW << "cannot find images at index " << current_image_index_;
+        return nullptr;
+    }
+
+    // normalize rotation matrix due to precision error from reading data
+    Matrix3d R = gt_poses_[current_image_index_].block<3, 3>(0, 0);
+    R = R + 0.5 * (Matrix3d::Identity() - R * R.transpose()) * R;
+    Vector3d t = gt_poses_[current_image_index_].block<3, 1>(0, 3);
+
+    // SE3 pose(gt_poses_[current_image_index_]);
+    // SE3 pose(R, t);
+
+    auto new_frame = Frame::createFrame(time_stamps_[current_image_index_], image);
+    new_frame->setPose(Pose({R,t}));
+    current_image_index_++;
+    return new_frame;
+}
+
+Frame::Ptr CFTDataset::CreateFrame(int image_index)
+{
+    cv::Mat image;
+
+    boost::format fmt("%s/%s");
+    image = cv::imread((fmt % dataset_path_ % filenames_[image_index]).str(), cv::IMREAD_GRAYSCALE);
+
+    if (image.data == nullptr)
+    {
+        LOGW << "cannot find images at index " << image_index;
+        return nullptr;
+    }
+
+    auto new_frame = Frame::createFrame(time_stamps_[image_index], image);
+    current_image_index_++;
+
+    return new_frame;
+}
+
+Pose CFTDataset::GetPose(int image_index)
+{
+    Matrix3d R = gt_poses_[image_index].block<3, 3>(0, 0);
+    R = R + 0.5 * (Matrix3d::Identity() - R * R.transpose()) * R;
+    Vector3d t = gt_poses_[image_index].block<3, 1>(0, 3);
+    return Pose({R,t});
+}

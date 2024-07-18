@@ -67,5 +67,20 @@ class AerialImageDataset : public Dataset
     Pose GetPose(int image_index);
 };
 
+class CFTDataset : public Dataset
+{
+  public:
+    CFTDataset(const std::string &dataset_path) : Dataset(dataset_path)
+    {
+      Init();
+    }
+    bool Init();
+    Frame::Ptr NextFrame();
+    Frame::Ptr CreateFrame(int image_index);
+    Pose GetPose(int image_index);
+
+  private:
+    std::vector<std::string> filenames_;
+};
 
 #endif

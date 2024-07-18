@@ -71,6 +71,9 @@ target_link_libraries(run_air ic_gvins_core)
 add_executable(run_airimg app/run_airimg.cpp)
 target_link_libraries(run_airimg ic_gvins_core)
 
+add_executable(run_cft app/run_cft.cpp)
+target_link_libraries(run_cft ic_gvins_core)
+
 # # abseil
 # set(ABSL_PROPAGATE_CXX_STD true)
 # add_subdirectory(thirdparty/abseil-cpp abseil-cpp)

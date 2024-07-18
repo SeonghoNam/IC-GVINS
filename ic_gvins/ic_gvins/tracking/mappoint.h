@@ -168,6 +168,7 @@ private:
     // 参考帧中的深度
     double depth_{DEFAULT_DEPTH}, depth_tmp_{DEFAULT_DEPTH};
     cv::Point2f ref_frame_keypoint_, ref_frame_keypoint_tmp_;
+    std::vector<cv::Mat> descriptors_;
     std::weak_ptr<Frame> ref_frame_, ref_frame_tmp_;
 
     int optimized_times_;

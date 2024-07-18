@@ -45,6 +45,12 @@ MapPoint::MapPoint(ulong id, const std::shared_ptr<Frame> &ref_frame, Vector3d p
 MapPoint::Ptr MapPoint::createMapPoint(std::shared_ptr<Frame> &ref_frame, Vector3d &pos, cv::Point2f &feature,
                                        double depth, MapPointType type) {
     static ulong factory_id_ = 0;
+    // cv::Mat descriptor;
+    // cv::Ptr<cv::ORB> detector = cv::ORB::create();
+    // std::vector<cv::KeyPoint> kp;
+    // kp.push_back(cv::KeyPoint(feature, 1.0));
+    // detector->detect(ref_frame->image(), kp, descriptor);
+
     return std::make_shared<MapPoint>(factory_id_++, ref_frame, pos, feature, depth, type);
 }
 
