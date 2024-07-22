@@ -595,8 +595,8 @@ void Tracking::featuresDetection(Frame::Ptr &frame, bool ismask) {
     // 计算每个分块已有特征点数量
     int col, row;
     for (const auto &feature : frame->features()) {
-        col = int(feature.second->keyPoint().x / (float) block_indexs_[0].first);
-        row = int(feature.second->keyPoint().y / (float) block_indexs_[0].second);
+        col = int(feature.second->distortedKeyPoint().x / (float) block_indexs_[0].first);
+        row = int(feature.second->distortedKeyPoint().y / (float) block_indexs_[0].second);
         features_cnts[row * block_cols_ + col]++;
     }
     for (auto &pts2d : pts2d_new_) {
@@ -626,6 +626,7 @@ void Tracking::featuresDetection(Frame::Ptr &frame, bool ismask) {
 
     auto tracking_function = [&](const tbb::blocked_range<int> &range) {
         for (int k = range.begin(); k != range.end(); k++) {
+        // for (int k = 0; k < block_cnts_; k++) {
             int blocl_track_num = track_max_block_features_ - features_cnts[k];
             if (blocl_track_num > 0) {
 
@@ -765,9 +766,8 @@ bool Tracking::triangulation() {
         auto pc       = camera_->world2cam(pw, frame_ref->pose());
         double depth  = pc.z();
         auto mappoint = MapPoint::createMapPoint(frame_ref, pw, pts2d_ref_undis[k], depth, MAPPOINT_TRIANGULATED);
-
-        auto feature = Feature::createFeature(frame_cur_, velocity_cur_[k], pts2d_cur_undis[k], pts2d_cur_[k],
-                                              FEATURE_TRIANGULATED);
+        
+        auto feature = Feature::createFeature(frame_cur_, velocity_cur_[k], pts2d_cur_undis[k], pts2d_cur_[k], FEATURE_TRIANGULATED);
         mappoint->addObservation(feature);
         feature->addMapPoint(mappoint);
         frame_cur_->addFeature(mappoint->id(), feature);

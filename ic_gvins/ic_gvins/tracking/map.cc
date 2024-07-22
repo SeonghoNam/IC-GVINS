@@ -63,7 +63,7 @@ vector<ulong> Map::orderedKeyFrames() {
 }
 
 Frame::Ptr Map::oldestKeyFrame() {
-    // std::unique_lock<std::mutex> lock(map_mutex_);
+    std::unique_lock<std::mutex> lock(map_mutex_);
 
     auto oldest = orderedKeyFrames()[0];
     return keyframes_.at(oldest);

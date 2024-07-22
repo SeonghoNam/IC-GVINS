@@ -118,6 +118,7 @@ public:
     }
 
     void setStamp(double stamp) {
+        std::unique_lock<std::mutex> lock(frame_mutex_);
         stamp_ = stamp;
     }
 
@@ -126,6 +127,7 @@ public:
     }
 
     void setTimeDelay(double td) {
+        std::unique_lock<std::mutex> lock(frame_mutex_);
         td_ = td;
     }
 
