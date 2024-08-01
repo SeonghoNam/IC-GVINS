@@ -102,7 +102,7 @@ private:
     static double ptsDistance(cv::Point2f &pt1, cv::Point2f &pt2);
 
     template <typename T> static void reduceVector(T &vec, vector<uint8_t> status);
-
+    static void reduceDescriptor(cv::Mat &descriptors, vector<uint8_t> status); 
 public:
     // 三点平面拟合的最大深度差异
     static constexpr double ASSOCIATE_MAXIUM_DISTANCE = 1.0;
@@ -114,7 +114,7 @@ public:
 private:
     // 配置参数
     // Configurations for visual process
-    const double TRACK_BLOCK_SIZE   = 200.0; // 特征提取分块大小
+    const double TRACK_BLOCK_SIZE   = 400.0; // 特征提取分块大小
     const int TRACK_PYRAMID_LEVEL   = 5;     // 光流跟踪金字塔层数
     const double TRACK_MIN_PARALLAX = 10.0;  // 三角化时最小的像素视差
     const double TRACK_MIN_INTERVAl = 0.08;  // 最短观测帧时间间隔
@@ -132,6 +132,7 @@ private:
     // For feature tracking
     vector<cv::Point2f> pts2d_cur_, pts2d_new_, pts2d_ref_;
     vector<Frame::Ptr> pts2d_ref_frame_;
+    cv::Mat ref_descriptors_;
 
     vector<Eigen::Vector2d> velocity_ref_, velocity_cur_;
 

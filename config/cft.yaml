@@ -11,7 +11,7 @@ viewer: true
  
 # 结果输出路径
 # Output directory
-outputpath: "cft"
+outputpath: "../output/cft"
 is_make_outputdir: true
 
 # 时间信息, s

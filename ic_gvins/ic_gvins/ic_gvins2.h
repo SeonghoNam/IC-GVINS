@@ -257,6 +257,7 @@ private:
     // Optimization options
     bool optimize_estimate_extrinsic_;
     bool optimize_estimate_td_;
+    bool optimize_fix_pose_;
     double optimize_reprojection_error_std_;
     int optimize_num_iterations_;
     size_t optimize_windows_size_;

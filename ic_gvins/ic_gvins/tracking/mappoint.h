@@ -61,6 +61,12 @@ public:
         return pos_;
     };
 
+    cv::Mat &descriptor()
+    {
+        std::unique_lock<std::mutex> lock(mappoint_mutex_);
+        return descriptor_;        
+    }
+
     int observedTimes() const {
         return observed_times_;
     }
@@ -73,6 +79,12 @@ public:
                                         double depth, MapPointType type);
 
     void addObservation(const Feature::Ptr &feature);
+
+    void addDescriptor(const cv::Mat descriptor) {
+        std::unique_lock<std::mutex> lock(mappoint_mutex_);
+
+        descriptor_ = descriptor.clone();
+    }
 
     void increaseUsedTimes() {
         std::unique_lock<std::mutex> lock(mappoint_mutex_);
@@ -168,7 +180,7 @@ private:
     // 参考帧中的深度
     double depth_{DEFAULT_DEPTH}, depth_tmp_{DEFAULT_DEPTH};
     cv::Point2f ref_frame_keypoint_, ref_frame_keypoint_tmp_;
-    std::vector<cv::Mat> descriptors_;
+    cv::Mat descriptor_;
     std::weak_ptr<Frame> ref_frame_, ref_frame_tmp_;
 
     int optimized_times_;

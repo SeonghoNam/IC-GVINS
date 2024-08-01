@@ -121,7 +121,8 @@ public:
                 Eigen::Map<Eigen::Matrix<double, 2, 7, Eigen::RowMajor>> jacobian_ex_pose(jacobians[2]);
 
                 Eigen::Matrix<double, 3, 6> jaco_ex;
-                jaco_ex.leftCols<3>() = cbc * (cnb1 * cb0n - Eigen::Matrix3d::Identity());
+                jaco_ex.leftCols<3>().setZero();
+                // jaco_ex.leftCols<3>() = cbc * (cnb1 * cb0n - Eigen::Matrix3d::Identity());
                 Eigen::Matrix3d tmp_r = cbc * cnb1 * cb0n * cbc.transpose();
 
                 jaco_ex.rightCols<3>() = -tmp_r * Rotation::skewSymmetric(pts_c_0) +

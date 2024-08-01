@@ -133,6 +133,7 @@ GVINS2::GVINS2(const string &configfile, const string &outputpath, Drawer::Ptr d
     reprojection_error_std_      = config["reprojection_error_std"].as<double>();
     optimize_estimate_extrinsic_ = config["optimize_estimate_extrinsic"].as<bool>();
     optimize_estimate_td_        = config["optimize_estimate_td"].as<bool>();
+    optimize_fix_pose_           = config["optimize_fix_pose"].as<bool>();
     optimize_num_iterations_     = config["optimize_num_iterations"].as<int>();
     optimize_windows_size_       = config["optimize_windows_size"].as<size_t>();
 
@@ -519,13 +520,15 @@ void GVINS2::setFinished() {
 
     Quaterniond q_b_c = Rotation::matrix2quaternion(pose_b_c_.R);
     Vector3d t_b_c    = pose_b_c_.t;
+    Vector3d euler    = Rotation::matrix2euler(pose_b_c_.R) * R2D;
 
     boost::format fmt("(%0.6lf, %0.6lf, %0.6lf, %0.6lf), (%0.3lf, %0.3lf, %0.3lf), %0.4lf");
 
     LOGW << "GVINS has finished processing";
     LOGW << "Estimated extrinsics: "
          << (fmt % q_b_c.x() % q_b_c.y() % q_b_c.z() % q_b_c.w() % t_b_c.x() % t_b_c.y() % t_b_c.z() % td_b_c_).str();
-
+    LOGW << "Estimated extrinsics (Euler): "
+         << (fmt % euler[0] % euler[1] % euler[2] % 0. % t_b_c.x() % t_b_c.y() % t_b_c.z() % td_b_c_).str();
     Logging::shutdownLogging();
 }
 
@@ -1478,14 +1481,15 @@ bool GVINS2::gvinsMarginalization() {
             continue;
         }
         auto &pw = mappoint->pos();
+        auto &descriptor = mappoint->descriptor();
 
         if (is_use_visualization_) {
             drawer_->addNewFixedMappoint(pw);
         }
-
-        // 保存路标点
-        // Save these mappoints to file
-        ptsfilesaver_->dump(vector<double>{pw.x(), pw.y(), pw.z()});
+        vector<double> mappoint_info{pw.x(), pw.y(), pw.z()};
+        for(int i = 0; i < descriptor.cols; i++)
+            mappoint_info.push_back(descriptor.at<unsigned char>(i));
+        ptsfilesaver_->dump(mappoint_info);
     }
 
     // 关键帧
@@ -1675,7 +1679,8 @@ void GVINS2::addStateParameters(ceres::Problem &problem) {
         // Pose
         ceres::LocalParameterization *parameterization = new (PoseParameterization);
         problem.AddParameterBlock(statedata.pose, Preintegration::numPoseParameter(), parameterization);
-
+        if(optimize_fix_pose_)
+            problem.SetParameterBlockConstant(statedata.pose);
         // IMU mix parameters
         //problem.AddParameterBlock(statedata.mix, Preintegration::numMixParameter(preintegration_options_));
     }

@@ -322,6 +322,7 @@ bool Tracking::doResetTracking() {
         pts2d_ref_.clear();
         pts2d_ref_frame_.clear();
         velocity_ref_.clear();
+        ref_descriptors_.release();
         return true;
     }
 
@@ -509,6 +510,7 @@ bool Tracking::trackReferenceFrame() {
     reduceVector(pts2d_new_, status);
     reduceVector(pts2d_ref_frame_, status);
     reduceVector(velocity_ref_, status);
+    reduceDescriptor(ref_descriptors_, status);
 
     if (pts2d_ref_.empty()) {
         LOGW << "No new feature in previous frame";
@@ -552,6 +554,7 @@ bool Tracking::trackReferenceFrame() {
         reduceVector(pts2d_ref_frame_, status);
         reduceVector(velocity_cur_, status);
         reduceVector(velocity_ref_, status);
+        reduceDescriptor(ref_descriptors_, status);
     }
 
     if (pts2d_cur_.empty()) {
@@ -584,6 +587,7 @@ void Tracking::featuresDetection(Frame::Ptr &frame, bool ismask) {
     // 初始化分配内存
     int features_cnts[block_cnts_];
     vector<vector<cv::Point2f>> block_features(block_cnts_);
+    vector<cv::Mat> block_descriptors(block_cnts_);
     // 必要的分配内存, 否则并行会造成数据结构错乱
     for (auto &block : block_features) {
         block.reserve(track_max_block_features_);
@@ -645,8 +649,13 @@ void Tracking::featuresDetection(Frame::Ptr &frame, bool ismask) {
                 Mat block_image = frame->image().colRange(col_sta, col_end).rowRange(row_sta, row_end);
                 Mat block_mask  = mask.colRange(col_sta, col_end).rowRange(row_sta, row_end);
 
-                cv::goodFeaturesToTrack(block_image, block_features[k], blocl_track_num, 0.01,
-                                        track_min_pixel_distance_, block_mask);
+                cv::Ptr<cv::ORB> detector = cv::ORB::create(blocl_track_num, 1.2, 2);
+                std::vector<cv::KeyPoint> keypoints;
+                detector->detectAndCompute(block_image, block_mask, keypoints, block_descriptors[k]);
+                for(auto kp : keypoints)
+                    block_features[k].push_back(kp.pt);
+                // cv::goodFeaturesToTrack(block_image, block_features[k], blocl_track_num, 0.01,
+                //                         track_min_pixel_distance_, block_mask);
                 if (!block_features[k].empty()) {
                     // 获取亚像素角点
                     cv::cornerSubPix(block_image, block_features[k], win_size, zero_zone, term_crit);
@@ -665,6 +674,7 @@ void Tracking::featuresDetection(Frame::Ptr &frame, bool ismask) {
         pts2d_ref_.clear();
         pts2d_ref_frame_.clear();
         velocity_ref_.clear();
+        ref_descriptors_.release();
     }
 
     for (int k = 0; k < block_cnts_; k++) {
@@ -683,6 +693,7 @@ void Tracking::featuresDetection(Frame::Ptr &frame, bool ismask) {
 
             num_new_features++;
         }
+        ref_descriptors_.push_back(block_descriptors[k]);
     }
 
     LOGI << "Add " << num_new_features << " new features to " << num_features;
@@ -766,15 +777,15 @@ bool Tracking::triangulation() {
         auto pc       = camera_->world2cam(pw, frame_ref->pose());
         double depth  = pc.z();
         auto mappoint = MapPoint::createMapPoint(frame_ref, pw, pts2d_ref_undis[k], depth, MAPPOINT_TRIANGULATED);
-        
+        mappoint->addDescriptor(ref_descriptors_.row(k));
+
         auto feature = Feature::createFeature(frame_cur_, velocity_cur_[k], pts2d_cur_undis[k], pts2d_cur_[k], FEATURE_TRIANGULATED);
         mappoint->addObservation(feature);
         feature->addMapPoint(mappoint);
         frame_cur_->addFeature(mappoint->id(), feature);
         mappoint->increaseUsedTimes();
 
-        feature = Feature::createFeature(frame_ref, velocity_ref_[k], pts2d_ref_undis[k], pts2d_ref_[k],
-                                         FEATURE_TRIANGULATED);
+        feature = Feature::createFeature(frame_ref, velocity_ref_[k], pts2d_ref_undis[k], pts2d_ref_[k], FEATURE_TRIANGULATED);
         mappoint->addObservation(feature);
         feature->addMapPoint(mappoint);
         frame_ref->addFeature(mappoint->id(), feature);
@@ -789,6 +800,30 @@ bool Tracking::triangulation() {
     reduceVector(pts2d_ref_frame_, status);
     reduceVector(pts2d_cur_, status);
     reduceVector(velocity_ref_, status);
+    reduceDescriptor(ref_descriptors_, status);
+
+    // // extract descritpors and assign descriptor to mappoint
+    // cv::Mat descriptors;
+    // cv::Ptr<cv::ORB> detector = cv::ORB::create(500, 1.2, 2);
+    // auto orignal_kps = kp;
+    // detector->compute(frame_ref_->image(), kp, descriptors);
+    // // descriptor 추출시 유효하지 않은 keypoint가 삭제됨. kp가 달라지므로 original kp와 비교
+    // for (size_t i = 0; i < orignal_kps.size(); i++) {
+    //     bool hasDescriptor = false;
+    //     for(size_t j = 0; j < kp.size(); j ++)
+    //     {
+    //         if(cv::norm(orignal_kps[i].pt - kp[j].pt) < 1.0)
+    //         {
+    //             mappoints[i]->addDescriptor(descriptors.row(j));
+    //             hasDescriptor = true;
+    //             break;
+    //         }
+    //     }
+    //     if(!hasDescriptor)
+    //     {
+    //         mappoints[i]->addDescriptor(cv::Mat::zeros(1,32, CV_8UC1));
+    //     }
+    // }
 
     pts2d_new_ = pts2d_cur_;
 
@@ -836,6 +871,16 @@ template <typename T> void Tracking::reduceVector(T &vec, vector<uint8_t> status
         }
     }
     vec.resize(index);
+}
+
+void Tracking::reduceDescriptor(cv::Mat &descriptors, vector<uint8_t> status) {
+    cv::Mat result;
+    for (int k = 0; k < descriptors.rows; k++) {
+        if (status[k]) {
+            result.push_back(descriptors.row(k));
+        }
+    }
+    result.copyTo(descriptors);
 }
 
 double Tracking::ptsDistance(cv::Point2f &pt1, cv::Point2f &pt2) {

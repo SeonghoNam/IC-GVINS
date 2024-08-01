@@ -1,5 +1,5 @@
-#include "visual_odometry.h"
 #include <yaml-cpp/yaml.h>
+#include <boost/filesystem.hpp>
 #include "dataset.h"
 #include "ic_gvins2.h"
 #include "drawer_pangolin.h"
@@ -24,13 +24,17 @@ int main(int argc, char **argv)
     CFTDataset dataset_(str_dataset_dir);
 
     GVINS2::Ptr gvins_ = nullptr;
-    std::string outputpath = "../output/";
+    auto outputpath = config["outputpath"].as<std::string>();
+    auto is_make_outputdir = config["is_make_outputdir"].as<bool>();
+    if (is_make_outputdir) {
+        boost::filesystem::create_directory(outputpath);
+    }
 
     Drawer::Ptr drawer = std::make_shared<DrawerPangolin>();
     gvins_             = std::make_shared<GVINS2>(config_file, outputpath, drawer);
 
     int image_index = 0;
-    Vector3d origin (36.9928 * D2R, 127.3529 * D2R, 0.0);
+    Vector3d origin (35.6900 * D2R, 127.1850 * D2R, 0.0);
     gvins_->setWorldOrigin(origin);
     Frame::Ptr new_frame = dataset_.CreateFrame(image_index);
     while(new_frame != nullptr)
