@@ -98,6 +98,7 @@ private:
     void addReprojectionParameters(ceres::Problem &problem);
 
     void addImuFactors(ceres::Problem &problem);
+    void addPoseFactors(ceres::Problem &problem);
     vector<std::pair<ceres::ResidualBlockId, GNSS *>> addGnssFactors(ceres::Problem &problem, bool isusekernel);
     vector<ceres::ResidualBlockId> addReprojectionFactors(ceres::Problem &problem, bool isusekernel);
     void doReintegration();

@@ -988,6 +988,8 @@ bool GVINS2::gvinsOptimization() {
 #if 0
     addImuFactors(problem);
 #endif
+    addPoseFactors(problem);
+    
     // 视觉重投影残差
     // The visual reprojection factors
     auto residual_ids = addReprojectionFactors(problem, true);
@@ -1429,7 +1431,7 @@ bool GVINS2::gvinsMarginalization() {
             marginalization_info->addResidualBlockInfo(residual);
         }
     }
-#if 0
+#if 1
     // 边缘化处理
     // Do marginalization
     marginalization_info->marginalization();
@@ -1711,6 +1713,24 @@ void GVINS2::addImuFactors(ceres::Problem &problem) {
     }
 }
 
+void GVINS2::addPoseFactors(ceres::Problem &problem) {
+    double pose_std[6];
+    double pos_prior_std  = 0.1;
+    double att_prior_std  = 0.000005 * D2R;
+    pose_std[0] = pos_prior_std;
+    pose_std[1] = pos_prior_std;
+    pose_std[2] = pos_prior_std;
+    pose_std[3] = att_prior_std;
+    pose_std[4] = att_prior_std;
+    pose_std[5] = att_prior_std;
+    
+    for (size_t k = 0; k < statedatalist_.size(); k++) {
+        // pose factors
+        auto factor = new ImuPosePriorFactor(statedatalist_[k].pose, pose_std);
+        problem.AddResidualBlock(factor, nullptr, statedatalist_[k].pose);
+    }
+
+}
 vector<std::pair<ceres::ResidualBlockId, GNSS *>> GVINS2::addGnssFactors(ceres::Problem &problem, bool isusekernel) {
     vector<std::pair<ceres::ResidualBlockId, GNSS *>> residual_block;
 

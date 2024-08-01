@@ -50,7 +50,7 @@ gnssthreshold: 20
 
 # 是否开启可视化
 # Use visualization
-is_use_visualization: false
+is_use_visualization: true
 
 # 跟踪
 # Tracking configurations
@@ -66,6 +66,7 @@ optimize_windows_size: 10           # 滑动窗口大小 (The size of the slidin
 optimize_num_iterations: 20         # 优化迭代次数 (The iterations in total)
 optimize_estimate_extrinsic: false   # 是否估计相机和IMU的外参 (Estimate the extrinsic)
 optimize_estimate_td: false          # 否估计相机和IMU之间的时间间隔 (Estimate the time delay)
+optimize_fix_pose: false
 
 
 
